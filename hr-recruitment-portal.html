@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HR Recruitment Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#4F46E5;--primary-light:#EEF2FF;--primary-dark:#3730A3;
+  --success:#10B981;--success-light:#ECFDF5;
+  --warning:#F59E0B;--warning-light:#FFFBEB;
+  --danger:#EF4444;--danger-light:#FEF2F2;
+  --info:#3B82F6;--info-light:#EFF6FF;
+  --gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;
+  --gray-300:#D1D5DB;--gray-400:#9CA3AF;--gray-500:#6B7280;
+  --gray-600:#4B5563;--gray-700:#374151;--gray-800:#1F2937;--gray-900:#111827;
+  --sidebar-w:230px;--topbar-h:56px;
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--gray-100);color:var(--gray-800);min-height:100vh;font-size:14px}
+
+/* PICKER */
+#picker-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+#picker-screen.hidden{display:none}
+.picker-card{background:#fff;border-radius:20px;box-shadow:0 25px 50px rgba(0,0,0,.35);width:100%;max-width:500px;overflow:hidden}
+.picker-top{background:linear-gradient(135deg,var(--primary-dark),var(--primary));padding:28px 32px;color:#fff;text-align:center}
+.picker-logo{width:60px;height:60px;background:rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px}
+.picker-top h1{font-size:21px;font-weight:800;margin-bottom:5px}
+.picker-top p{font-size:13px;opacity:.8;line-height:1.5}
+.picker-body{padding:28px 32px}
+.picker-btn{display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;border-radius:10px;border:2px solid var(--gray-200);background:#fff;cursor:pointer;transition:all .2s;text-align:left;margin-bottom:10px}
+.picker-btn:hover{border-color:var(--primary);background:var(--primary-light);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.picker-btn-icon{width:42px;height:42px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.picker-btn strong{display:block;font-size:13.5px;font-weight:700;color:var(--gray-900);margin-bottom:2px}
+.picker-btn span{font-size:12px;color:var(--gray-500)}
+.picker-divider{text-align:center;font-size:12px;color:var(--gray-400);margin:4px 0 14px;position:relative}
+.picker-divider::before,.picker-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--gray-200)}
+.picker-divider::before{left:0}.picker-divider::after{right:0}
+.picker-footer{padding:14px 32px 22px;text-align:center;font-size:12px;color:var(--gray-400)}
+
+/* SAVE BAR */
+.save-bar{position:fixed;bottom:16px;right:16px;background:#1F2937;color:#fff;padding:10px 16px;border-radius:10px;font-size:12px;z-index:9999;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .3s}
+.save-bar.show{opacity:1}
+.save-bar.error{background:var(--danger)}
+.save-spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ERROR TOAST */
+.err-toast{position:fixed;bottom:60px;right:16px;background:#1F2937;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;display:none;max-width:360px;line-height:1.5;box-shadow:var(--shadow-lg)}
+.err-toast.show{display:block}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar-w);background:var(--gray-900);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sb-logo-icon{width:36px;height:36px;background:var(--primary);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sb-logo span{font-size:15px;font-weight:700}
+.sb-logo small{display:block;font-size:10px;color:var(--gray-400);font-weight:400;letter-spacing:.5px;text-transform:uppercase}
+nav{flex:1;padding:10px 0}
+nav .nav-sec{padding:7px 14px 3px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-500);font-weight:600}
+nav a{display:flex;align-items:center;gap:9px;padding:8px 14px;color:var(--gray-300);text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;cursor:pointer;border-radius:6px;margin:1px 6px}
+nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+nav a.active{background:var(--primary);color:#fff}
+nav a svg{flex-shrink:0;width:15px;height:15px}
+nav a .nav-cnt{margin-left:auto;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+nav a.active .nav-cnt{background:rgba(255,255,255,.25)}
+.sb-file{padding:10px 14px 14px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-file .sf-lbl{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.sb-file .sf-name{font-size:12px;color:var(--gray-300);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.sf-btns{display:flex;gap:5px}
+.sf-btn{font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:none;color:var(--gray-400);cursor:pointer;transition:all .15s}
+.sf-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+
+/* MAIN */
+#main{margin-left:var(--sidebar-w)}
+.topbar{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 22px;height:var(--topbar-h);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar h1{font-size:15px;font-weight:700;color:var(--gray-900)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.page{padding:22px;display:none;animation:fadeIn .2s}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{background:#fff;border-radius:10px;padding:18px 20px;box-shadow:var(--shadow);border:1px solid var(--gray-200);border-left:4px solid var(--primary)}
+.stat-card.sc-green{border-left-color:var(--success)}.stat-card.sc-amber{border-left-color:var(--warning)}.stat-card.sc-red{border-left-color:var(--danger)}.stat-card.sc-info{border-left-color:var(--info)}.stat-card.sc-purple{border-left-color:#8B5CF6}
+.stat-card .sc-label{font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-card .sc-value{font-size:28px;font-weight:800;color:var(--gray-900);line-height:1}
+.stat-card .sc-sub{font-size:11px;margin-top:5px;color:var(--gray-400)}
+
+/* CARDS */
+.card{background:#fff;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--gray-200)}
+.card-header{padding:14px 18px 10px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:13px;font-weight:700;color:var(--gray-700)}
+.card-body{padding:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-box{background:#fff;border-radius:10px;border:1px solid var(--gray-200);box-shadow:var(--shadow);padding:18px}
+.chart-box h3{font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px}
+.chart-box canvas{max-height:220px}
+
+/* PIPELINE FUNNEL */
+.pipe-stage{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pipe-label{width:185px;font-size:11.5px;font-weight:600;color:var(--gray-600);text-align:right;flex-shrink:0}
+.pipe-bar-wrap{flex:1;background:var(--gray-100);border-radius:5px;height:26px;overflow:hidden}
+.pipe-bar{height:100%;border-radius:5px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:700;color:#fff;min-width:26px}
+.pipe-cnt{font-size:12px;font-weight:700;color:var(--gray-600);width:28px;flex-shrink:0}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:all .15s;line-height:1}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover:not(:disabled){background:var(--primary-dark)}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700);border:1px solid var(--gray-200)}.btn-secondary:hover:not(:disabled){background:var(--gray-200)}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:4px 9px;font-size:11.5px}
+.btn-icon{padding:5px;background:none;border:1px solid var(--gray-200);color:var(--gray-400);border-radius:6px}
+.btn-icon:hover:not(:disabled){background:var(--gray-100);color:var(--gray-600)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.b-applied{background:#EFF6FF;color:#1D4ED8}.b-screening{background:#FFF7ED;color:#C2410C}
+.b-interview{background:#F5F3FF;color:#6D28D9}.b-offer{background:#ECFDF5;color:#065F46}
+.b-hired{background:#F0FDF4;color:#166534;border:1px solid #BBF7D0}.b-rejected{background:#FEF2F2;color:#991B1B}
+.b-open{background:#DCFCE7;color:#166534}.b-closed{background:var(--gray-100);color:var(--gray-500)}
+.b-on-hold{background:#FFF7ED;color:#C2410C}.b-scheduled{background:#EFF6FF;color:#1D4ED8}
+.b-completed{background:#ECFDF5;color:#065F46}.b-cancelled{background:#FEF2F2;color:#991B1B}
+/* L1 status badges */
+.bl-scheduled{background:#DBEAFE;color:#1D4ED8}.bl-no-show{background:#F3F4F6;color:#6B7280}
+.bl-rescheduled{background:#FEF3C7;color:#B45309}.bl-l1-fb{background:#FEF9C3;color:#92400E}
+.bl-l1-sel{background:#BBF7D0;color:#166534}.bl-l1-rej{background:#FEE2E2;color:#991B1B}
+.bl-l2-sched{background:#E0E7FF;color:#3730A3}.bl-l2-fb{background:#EDE9FE;color:#5B21B6}
+.bl-l2-wait{background:#F3E8FF;color:#7E22CE}.bl-l2-rej{background:#FFE4E6;color:#9F1239}
+.bl-final{background:#A7F3D0;color:#065F46}.bl-hold{background:#FFEDD5;color:#9A3412}
+.bl-wait-client{background:#CFFAFE;color:#164E63}
+.bl-l1-hold{background:#FEF3C7;color:#B45309}.bl-l2-hold{background:#FDE68A;color:#92400E}
+/* Selection badges */
+.bs-joined{background:#D1FAE5;color:#065F46}.bs-offer-rel{background:#DBEAFE;color:#1D4ED8}
+.bs-offer-drop{background:#FEE2E2;color:#991B1B}.bs-offer-yet{background:#FEF3C7;color:#92400E}
+.bs-final{background:#A7F3D0;color:#065F46}.bs-hold{background:#FFEDD5;color:#9A3412}
+.bs-wait{background:#CFFAFE;color:#164E63}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--gray-200)}
+table{width:100%;border-collapse:collapse;background:#fff}
+thead th{background:var(--gray-50);padding:9px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--gray-200);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--gray-100);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--gray-50)}
+tbody td{padding:10px 13px;font-size:13px;color:var(--gray-700);vertical-align:middle}
+tfoot td{padding:9px 13px;font-size:12px;color:var(--gray-400);background:var(--gray-50);border-top:1px solid var(--gray-200)}
+.td-name{font-weight:600;color:var(--gray-900);font-size:13.5px}
+.td-sub{font-size:11.5px;color:var(--gray-400);margin-top:2px}
+.actions-cell{display:flex;gap:5px}
+.avatar{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filter-input{padding:7px 11px;border:1px solid var(--gray-200);border-radius:7px;font-size:12.5px;color:var(--gray-700);background:#fff;outline:none}
+.filter-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;box-shadow:var(--shadow-lg);width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;animation:modalIn .2s}
+.modal-lg{max-width:700px}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-header{padding:16px 20px 12px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.modal-header h2{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:20px;line-height:1;padding:2px 5px;border-radius:5px}
+.modal-close:hover{background:var(--gray-100);color:var(--gray-600)}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:#fff}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+label{font-size:11.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.3px}
+input,select,textarea{padding:8px 11px;border:1px solid var(--gray-300);border-radius:7px;font-size:13px;color:var(--gray-800);outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+textarea{resize:vertical;min-height:75px}
+
+/* KANBAN */
+.kanban-wrap{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+.kanban-col{background:var(--gray-100);border-radius:10px;min-width:155px;flex:1;max-width:185px;display:flex;flex-direction:column}
+.kanban-col-header{padding:9px 12px 7px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0}
+.kanban-col-count{background:rgba(0,0,0,.1);border-radius:20px;padding:1px 7px;font-size:11px}
+.kanban-cards{padding:0 7px 8px;display:flex;flex-direction:column;gap:7px;min-height:50px}
+.k-card{background:#fff;border-radius:8px;padding:11px;box-shadow:var(--shadow);border:1px solid var(--gray-200);cursor:pointer;transition:box-shadow .15s}
+.k-card:hover{box-shadow:var(--shadow-md)}
+.k-card .kc-name{font-weight:600;font-size:13px;color:var(--gray-900);margin-bottom:3px}
+.k-card .kc-meta{font-size:11px;color:var(--gray-400);line-height:1.5}
+.k-card .kc-actions{margin-top:7px;display:flex;gap:4px}
+.kc-applied{border-top:3px solid #3B82F6}.kc-screening{border-top:3px solid #F97316}
+.kc-interview{border-top:3px solid #8B5CF6}.kc-offer{border-top:3px solid #10B981}
+.kc-hired{border-top:3px solid #059669}.kc-rejected{border-top:3px solid #EF4444}.kc-on-hold{border-top:3px solid #F59E0B}
+
+/* FEEDBACK */
+.stars{color:var(--warning);font-size:13px}
+.rec-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.rec-proceed{background:#DCFCE7;color:#166534}.rec-hold{background:#FFF7ED;color:#C2410C}.rec-reject{background:#FEF2F2;color:#991B1B}
+.feedback-item{background:var(--gray-50);border-radius:8px;padding:13px;border:1px solid var(--gray-200);margin-bottom:9px}
+
+/* TABS */
+.tab-group{display:flex;border-bottom:2px solid var(--gray-200);margin-bottom:16px}
+.tab-btn{padding:9px 16px;font-size:13px;font-weight:500;color:var(--gray-500);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--primary)}.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:700}
+
+/* MISC */
+.sec-title{font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;background:var(--gray-100);color:var(--gray-600);font-weight:500}
+.divider{border:none;border-top:1px solid var(--gray-200);margin:14px 0}
+.empty-state{text-align:center;padding:40px;color:var(--gray-400);font-size:13px}
+@media(max-width:960px){.stats-grid{grid-template-columns:repeat(2,1fr)}.grid-2,.charts-grid{grid-template-columns:1fr}}
+</style>
+
+<!-- CDN status flags — set before main script, non-destructive -->
+<script>
+window.addEventListener('load', function(){
+  window._NO_XLSX  = (typeof XLSX  === 'undefined');
+  window._NO_CHART = (typeof Chart === 'undefined');
+  if(!window._NO_XLSX && !window._NO_CHART) return;
+  // Show a small dismissible banner — do NOT replace the body
+  var b = document.createElement('div');
+  b.id = 'cdn-warn-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEF3C7;color:#92400E;font-size:12px;padding:7px 14px;display:flex;align-items:center;gap:10px;border-bottom:2px solid #FCD34D;box-shadow:0 2px 6px rgba(0,0,0,.12)';
+  var msgs = [];
+  if(window._NO_XLSX)  msgs.push('Excel file save/load → browser storage');
+  if(window._NO_CHART) msgs.push('charts disabled');
+  b.innerHTML = '<span style="font-size:15px">⚠️</span><span><strong>SharePoint / offline mode:</strong> ' + msgs.join('; ') + '. All other features work normally.</span>'
+    + '<button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-weight:700;font-size:16px;color:#92400E;line-height:1">✕</button>';
+  document.body.prepend(b);
+  if(window._SANDBOX_MODE && typeof _showSandboxLoginNotice === 'function') _showSandboxLoginNotice();
+  if(window._NO_XLSX && typeof _adjustPickerForNoXlsx === 'function') _adjustPickerForNoXlsx();
+});
+</script>
+</head>
+<body>
+<!-- LOGIN GATE -->
+<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%);display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:40px 36px;width:360px;box-shadow:0 24px 60px rgba(0,0,0,.25)">
+    <div style="text-align:center;margin-bottom:26px">
+      <div style="font-size:40px;margin-bottom:8px">🔐</div>
+      <div style="font-size:20px;font-weight:800;color:#1F2937;margin-bottom:4px">HR Recruitment Portal</div>
+      <div style="font-size:13px;color:#6B7280">Sign in with your credentials</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Username</label>
+      <input id="login-uname" type="text" placeholder="Enter username" autocomplete="username"
+        style="width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Password</label>
+      <input id="login-pwd" type="password" placeholder="Enter password" autocomplete="current-password"
+        style="width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none">
+    </div>
+    <div id="login-error" style="color:#DC2626;font-size:12px;margin-bottom:10px;min-height:16px;text-align:center"></div>
+    <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
+    <div style="margin-top:14px;font-size:11px;color:#9CA3AF;text-align:center">Default: admin / Admin@123 — change after first login</div>
+    <div style="margin-top:10px;text-align:center"><a href="#" id="login-reset-link" style="font-size:11px;color:#9CA3AF;text-decoration:underline;cursor:pointer">Can't log in? Reset credentials</a></div>
+  </div>
+</div>
+
+
+<!-- FILE PICKER -->
+<div id="picker-screen">
+  <div class="picker-card">
+    <div class="picker-top">
+      <div class="picker-logo">👥</div>
+      <h1>HR Recruitment Portal</h1>
+      <p>All your data lives in an Excel file on your computer.<br>No cloud account or upload required.</p>
+    </div>
+    <div class="picker-body">
+      <button class="picker-btn" id="btn-reconnect" style="display:none;border-color:#059669" onclick="reconnectLastFile()">
+        <div class="picker-btn-icon" style="background:#DCFCE7">⚡</div>
+        <div><strong id="btn-reconnect-label" style="color:#065F46">Reconnect to last file</strong><span id="btn-reconnect-sub">Click to re-open your previous Excel file</span></div>
+      </button>
+      <button class="picker-btn" onclick="openExcelFile()">
+        <div class="picker-btn-icon" style="background:#EFF6FF">📂</div>
+        <div><strong>Open existing Excel file</strong><span>Load your HR-Recruitment-Data.xlsx</span></div>
+      </button>
+      <div class="picker-divider">or</div>
+      <button class="picker-btn" onclick="createNewFile()">
+        <div class="picker-btn-icon" style="background:#ECFDF5">✨</div>
+        <div><strong>Create a new Excel file</strong><span>Start fresh with an empty portal</span></div>
+      </button>
+      <input type="file" id="file-input-hidden" accept=".xlsx" onchange="loadFromInput(this)">
+    </div>
+    <div class="picker-footer">Works with OneDrive · Dropbox · Google Drive · Local folders<br>
+      <span style="color:#059669;font-weight:600">✓ Chrome/Edge</span> &nbsp;
+      <span style="color:#059669;font-weight:600">✓ Safari 15+</span> &nbsp;
+      <span style="color:#F59E0B;font-weight:600">Firefox: upload/download mode</span>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE BAR -->
+<div class="save-bar" id="save-bar"><div class="save-spinner" id="save-spinner"></div><span id="save-msg">Saving…</span></div>
+<div class="err-toast" id="err-toast"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" style="display:none">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">👥</div>
+    <div><span>HR Portal</span><small>Recruitment Tracker</small></div>
+  </div>
+  <nav>
+    <div class="nav-sec">Overview</div>
+    <a onclick="showPage('dashboard')" id="nav-dashboard">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Dashboard
+    </a>
+    <a onclick="showPage('analytics')" id="nav-analytics">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 8,10 11,5 15,3"/></svg>Analytics
+    </a>
+    <a onclick="showPage('auditlog')" id="nav-auditlog">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h9l3 3v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"/><polyline points="8,2 8,6 12,6"/><line x1="4" y1="8" x2="11" y2="8"/><line x1="4" y1="11" x2="9" y2="11"/></svg>Audit Log
+    </a>
+    <div class="nav-sec">Recruitment</div>
+    <a onclick="showPage('jobs')" id="nav-jobs">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="10" rx="1"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><line x1="2" y1="8" x2="14" y2="8"/></svg>Jobs
+      <span class="nav-cnt" id="cnt-jobs">0</span>
+    </a>
+    <a onclick="showPage('candidates')" id="nav-candidates">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14v-1.5A3.5 3.5 0 014.5 9h3A3.5 3.5 0 0111 12.5V14"/><line x1="13" y1="7" x2="13" y2="11"/><line x1="11" y1="9" x2="15" y2="9"/></svg>Candidates
+      <span class="nav-cnt" id="cnt-cands">0</span>
+    </a>
+    <a onclick="showPage('pipeline')" id="nav-pipeline">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="5" width="4" height="8" rx="1"/><rect x="11" y="1" width="4" height="12" rx="1"/></svg>Pipeline (Kanban)
+    </a>
+    <div class="nav-sec">Interviews</div>
+    <a onclick="showPage('int-schedule')" id="nav-int-schedule">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="13" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="1" x2="5" y2="4"/><line x1="11" y1="1" x2="11" y2="4"/></svg>Interview Schedule
+      <span class="nav-cnt" id="cnt-int-sched">0</span>
+    </a>
+    <a onclick="showPage('int-log')" id="nav-int-log">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12M2 7h12M2 11h8"/><circle cx="13" cy="12" r="2.5"/></svg>Interview Log (L1/L2)
+      <span class="nav-cnt" id="cnt-int-log">0</span>
+    </a>
+    <a onclick="showPage('selections')" id="nav-selections">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,9 6,13 14,4"/></svg>Selections
+      <span class="nav-cnt" id="cnt-sel">0</span>
+    </a>
+  </nav>
+  <div class="sb-file">
+    <div class="sf-lbl">Excel File</div>
+    <div class="sf-name" id="excel-filename">—</div>
+    <div class="sf-btns">
+      <button class="sf-btn" onclick="reloadFromFile()">↻ Reload</button>
+      <button class="sf-btn" onclick="switchFile()">⇄ Switch</button>
+    </div>
+  </div>
+  <div class="sb-file" style="border-top:1px solid var(--gray-200);padding-top:10px;margin-top:2px">
+    <div class="sf-lbl">Signed in as</div>
+    <div id="sb-user-name" style="font-weight:700;font-size:13px;color:var(--gray-800);margin-top:3px;word-break:break-all">—</div>
+    <div id="sb-user-role" style="font-size:11px;color:var(--gray-400);margin-bottom:8px"></div>
+    <button id="sb-manage-btn" class="sf-btn" onclick="openUsersModal()" style="display:none;width:100%;margin-bottom:4px">👥 Manage Users</button>
+    <button class="sf-btn" onclick="openChgPwdModal(null)" style="width:100%;margin-bottom:4px">🔑 Change Password</button>
+    <button class="sf-btn" onclick="doLogout()" style="width:100%;color:#DC2626;font-weight:700">⎋ Sign Out</button>
+    <button class="sf-btn" onclick="downloadBundled()" id="offline-btn" style="width:100%;margin-top:8px;background:#F0FDF4;color:#065F46;border:1px solid #6EE7B7;font-weight:700" title="Create a self-contained version that works on OneDrive/SharePoint">📦 Offline Version</button>
+    <div id="offline-progress" style="display:none;font-size:11px;color:var(--gray-400);text-align:center;margin-top:5px;line-height:1.5"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main" style="display:none">
+  <div class="topbar">
+    <h1 id="page-title">Dashboard</h1>
+    <div class="topbar-actions" id="topbar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="reloadFromFile()">↻ Reload</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="stats-grid" id="dash-kpis"></div>
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><h3>📊 Hiring Pipeline</h3></div><div class="card-body"><div id="dash-funnel"></div></div></div>
+      <div class="card"><div class="card-header"><h3>🗓 Upcoming Interviews</h3><button class="btn btn-secondary btn-sm" onclick="showPage('int-schedule')">View All</button></div><div id="dash-upcoming"></div></div>
+    </div>
+    <div class="grid-2" style="margin-top:18px">
+      <div class="card"><div class="card-header"><h3>👤 Recent Candidates</h3><button class="btn btn-secondary btn-sm" onclick="showPage('candidates')">View All</button></div><div id="dash-recent-cands"></div></div>
+      <div class="card"><div class="card-header"><h3>📋 Interview Log Summary</h3><button class="btn btn-secondary btn-sm" onclick="showPage('int-log')">View All</button></div><div id="dash-log-summary"></div></div>
+    </div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="page" id="page-jobs">
+    <div class="filters">
+      <input class="filter-input" type="text" id="job-search" placeholder="Search jobs…" oninput="renderJobs()" style="width:200px">
+      <select class="filter-input" id="job-status-f" onchange="renderJobs()"><option value="">All Statuses</option><option>Open</option><option>On Hold</option><option>Closed</option></select>
+      <select class="filter-input" id="job-dept-f" onchange="renderJobs()"><option value="">All Departments</option></select>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Job Title</th><th>Client</th><th>Department</th><th>Location</th><th>Hiring Manager</th><th>Status</th><th>Positions</th><th>Candidates</th><th>Opened</th><th>Actions</th></tr></thead>
+      <tbody id="jobs-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- CANDIDATES -->
+  <div class="page" id="page-candidates">
+    <div class="filters">
+      <input class="filter-input" type="text" id="cand-search" placeholder="Search candidates…" oninput="renderCandidates()" style="width:200px">
+      <select class="filter-input" id="cand-stage-f" onchange="renderCandidates()"><option value="">All Stages</option><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
+      <select class="filter-input" id="cand-job-f" onchange="renderCandidates()"><option value="">All Jobs</option></select>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Candidate</th><th>Applied For</th><th>Stage</th><th>Applied Date</th><th>Interviewers</th><th>Actions</th></tr></thead>
+      <tbody id="cands-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="page" id="page-pipeline">
+    <div class="filters" style="margin-bottom:18px">
+      <select class="filter-input" id="pipeline-job-f" onchange="renderPipeline()"><option value="">All Jobs</option></select>
+    </div>
+    <div class="kanban-wrap" id="kanban-board"></div>
+  </div>
+
+  <!-- INTERVIEW SCHEDULE -->
+  <div class="page" id="page-int-schedule">
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchIntTab('scheduled',this)">Scheduled</button>
+      <button class="tab-btn" onclick="switchIntTab('completed',this)">Completed</button>
+      <button class="tab-btn" onclick="switchIntTab('all',this)">All</button>
+    </div>
+    <div id="int-sched-list"></div>
+  </div>
+
+  <!-- INTERVIEW LOG -->
+  <div class="page" id="page-int-log">
+    <div class="filters">
+      <input class="filter-input" type="text" id="log-search" placeholder="Search candidate / role…" oninput="renderIntLog()" style="width:200px">
+      <select class="filter-input" id="log-client-f" onchange="renderIntLog()"><option value="">All Clients</option></select>
+      <select class="filter-input" id="log-status-f" onchange="renderIntLog()">
+        <option value="">All Statuses</option>
+        <option>Scheduled</option><option>No Show</option><option>Rescheduled</option>
+        <option>L1 Completed – Feedback Pending</option><option>L1 Select</option><option>L1 Reject</option><option>L1 On Hold</option>
+        <option>L2 Scheduled</option><option>L2 Completed – Feedback Pending</option>
+        <option>L2 Completed – Waiting for Client</option><option>L2 Reject</option><option>L2 On Hold</option>
+        <option>Final Select</option><option>On Hold</option><option>Waiting for Client Feedback</option>
+      </select>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Time</th><th>Candidate</th><th>Skill / Role</th><th>Client</th><th>L1/L2 Status</th><th>Update / Notes</th><th>Actions</th></tr></thead>
+      <tbody id="log-tbody"></tbody>
+      <tfoot><tr><td colspan="8" id="log-footer"></td></tr></tfoot>
+    </table></div>
+  </div>
+
+  <!-- SELECTIONS -->
+  <div class="page" id="page-selections">
+    <div class="filters">
+      <input class="filter-input" type="text" id="sel-search" placeholder="Search candidate / skill…" oninput="renderSelections()" style="width:200px">
+      <select class="filter-input" id="sel-client-f" onchange="renderSelections()"><option value="">All Clients</option></select>
+      <select class="filter-input" id="sel-status-f" onchange="renderSelections()">
+        <option value="">All Statuses</option>
+        <option>Final Select</option><option>Offer Yet to Be Released</option><option>Offer Released</option>
+        <option>Joined</option><option>Offer Dropped</option><option>On Hold</option><option>Waiting for Client Feedback</option>
+      </select>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Candidate</th><th>Skill / Role</th><th>Client</th><th>Phone</th><th>Offer CTC</th><th>DOJ</th><th>Status</th><th>Comments</th><th>Actions</th></tr></thead>
+      <tbody id="sel-tbody"></tbody>
+      <tfoot><tr><td colspan="9" id="sel-footer"></td></tr></tfoot>
+    </table></div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="page" id="page-analytics">
+    <div class="stats-grid" id="analytics-kpis" style="margin-bottom:22px"></div>
+    <div class="charts-grid">
+      <div class="chart-box"><h3>Candidates by Stage</h3><canvas id="chart-funnel"></canvas></div>
+      <div class="chart-box"><h3>Applications by Department</h3><canvas id="chart-dept"></canvas></div>
+      <div class="chart-box"><h3>Interview Log Status Mix</h3><canvas id="chart-log-status"></canvas></div>
+      <div class="chart-box"><h3>Selection Outcomes</h3><canvas id="chart-sel-outcomes"></canvas></div>
+    </div>
+  
+  </div><!-- end page-analytics -->
+
+  <!-- AUDIT LOG PAGE -->
+  <div id="page-auditlog" class="page">
+    <div class="page-header">
+      <h2>📋 Audit Log</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="al-entity-f" onchange="renderAuditLog()" style="font-size:13px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
+          <option value="">All Entities</option>
+          <option value="Job">Jobs</option>
+          <option value="Candidate">Candidates</option>
+          <option value="Interview">Interviews</option>
+          <option value="Interview Log">Interview Log</option>
+          <option value="Selection">Selections</option>
+        </select>
+        <select id="al-action-f" onchange="renderAuditLog()" style="font-size:13px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
+          <option value="">All Actions</option>
+          <option value="Created">Created</option>
+          <option value="Modified">Modified</option>
+          <option value="Deleted">Deleted</option>
+        </select>
+        <select id="al-user-f" onchange="renderAuditLog()" style="font-size:13px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff">
+          <option value="">All Users</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('al-entity-f').value='';document.getElementById('al-action-f').value='';document.getElementById('al-user-f').value='';renderAuditLog()">✕ Clear Filters</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:150px">Timestamp</th>
+            <th style="width:100px">User</th>
+            <th style="width:90px">Action</th>
+            <th style="width:110px">Entity</th>
+            <th style="width:60px">ID</th>
+            <th>Summary</th>
+          </tr></thead>
+          <tbody id="audit-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Job Modal -->
+<div class="modal-overlay" id="job-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="job-modal-title">Add Job</h2><button class="modal-close" onclick="closeModal('job-modal')">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group full"><label>Job Title *</label><input id="jf-title" placeholder="e.g. Java Lead / Architect"></div>
+      <div class="form-group"><label>Client / End-Client *</label><input id="jf-client" placeholder="e.g. Giniminds, TechMahindra"></div>
+      <div class="form-group"><label>Department *</label><input id="jf-dept" placeholder="e.g. Engineering"></div>
+      <div class="form-group"><label>Location</label><input id="jf-location" placeholder="e.g. Remote, Bangalore"></div>
+      <div class="form-group"><label>Hiring Manager</label><input id="jf-hm"></div>
+      <div class="form-group"><label>No. of Positions *</label><input type="number" id="jf-positions" min="1" value="1" placeholder="1"></div>
+      <div class="form-group"><label>Status</label><select id="jf-status"><option>Open</option><option>On Hold</option><option>Closed</option></select></div>
+      <div class="form-group full"><label>Description</label><textarea id="jf-desc" placeholder="Role summary…"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('job-modal')">Cancel</button><button class="btn btn-primary" onclick="saveJob()">Save Job</button></div>
+  </div>
+</div>
+
+<!-- Candidate Modal -->
+<div class="modal-overlay" id="cand-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="cand-modal-title">Add Candidate</h2><button class="modal-close" onclick="closeModal('cand-modal')">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Full Name *</label><input id="cf-name"></div>
+      <div class="form-group"><label>Email *</label><input id="cf-email"></div>
+      <div class="form-group"><label>Phone</label><input id="cf-phone"></div>
+      <div class="form-group"><label>LinkedIn</label><input id="cf-linkedin"></div>
+      <div class="form-group"><label>Applied For *</label><select id="cf-job"></select></div>
+      <div class="form-group"><label>Stage</label>
+        <select id="cf-stage"><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
+      </div>
+      <div class="form-group full"><label>Notes</label><textarea id="cf-notes"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('cand-modal')">Cancel</button><button class="btn btn-primary" onclick="saveCandidate()">Save</button></div>
+  </div>
+</div>
+
+<!-- Interview Schedule Modal -->
+<div class="modal-overlay" id="int-sched-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="int-sched-modal-title">Schedule Interview</h2><button class="modal-close" onclick="closeModal('int-sched-modal')">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Candidate *</label><select id="isf-cand" onchange="autoFillJobFromCand()"></select></div>
+      <div class="form-group"><label>Job / Role *</label><select id="isf-job"></select></div>
+      <div class="form-group"><label>Date *</label><input type="date" id="isf-date"></div>
+      <div class="form-group"><label>Time *</label><input type="time" id="isf-time"></div>
+      <div class="form-group"><label>Round / Type</label><select id="isf-type"><option>L1 Round</option><option>L2 Round</option><option>Client Round</option><option>Phone Screen</option><option>Video Call</option><option>Technical</option><option>On-site</option></select></div>
+      <div class="form-group"><label>Status</label><select id="isf-status"><option>Scheduled</option><option>Completed</option><option>Cancelled</option></select></div>
+      <div class="form-group full"><label>Interviewers (comma-separated)</label><input id="isf-interviewers" placeholder="Alice Brown, Bob Singh"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="isf-notes"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('int-sched-modal')">Cancel</button><button class="btn btn-primary" onclick="saveIntSched()">Save</button></div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal-overlay" id="feedback-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h2 id="fb-modal-title">Interview Feedback</h2><button class="modal-close" onclick="closeModal('feedback-modal')">✕</button></div>
+    <div class="modal-body">
+      <div id="fb-int-info" style="margin-bottom:14px;padding:13px;background:var(--gray-50);border-radius:8px;border:1px solid var(--gray-200)"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <strong style="font-size:13px">Panelist Feedback</strong>
+        <button class="btn btn-secondary btn-sm" onclick="showFbForm()">+ Add Feedback</button>
+      </div>
+      <div id="fb-list"></div>
+      <div id="fb-form" style="display:none;margin-top:12px;background:var(--primary-light);border-radius:9px;padding:15px;border:1px solid #C7D2FE">
+        <strong style="font-size:13px;color:var(--primary-dark);display:block;margin-bottom:11px">Add Your Feedback</strong>
+        <div class="form-grid">
+          <div class="form-group"><label>Your Name *</label><input id="fb-name"></div>
+          <div class="form-group"><label>Rating (1–5) *</label><select id="fb-rating"><option value="5">⭐⭐⭐⭐⭐ Excellent</option><option value="4">⭐⭐⭐⭐ Good</option><option value="3" selected>⭐⭐⭐ Average</option><option value="2">⭐⭐ Below Avg</option><option value="1">⭐ Poor</option></select></div>
+          <div class="form-group"><label>Recommendation *</label><select id="fb-rec"><option value="proceed">✅ Proceed</option><option value="hold">⏸ Hold</option><option value="reject">❌ Reject</option></select></div>
+          <div class="form-group full"><label>Comments *</label><textarea id="fb-comments" placeholder="Strengths, concerns, observations…"></textarea></div>
+        </div>
+        <div style="display:flex;gap:7px;margin-top:9px">
+          <button class="btn btn-primary btn-sm" onclick="submitFeedback()">Submit</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('fb-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <hr class="divider">
+      <strong style="font-size:13px;display:block;margin-bottom:8px">Update Candidate Stage</strong>
+      <div style="display:flex;gap:7px;flex-wrap:wrap" id="fb-stage-btns"></div>
+      <div id="fb-next-round-btns" style="display:none;margin-top:12px;padding:11px;background:#F0FDF4;border-radius:8px;border:1px solid #BBF7D0">
+        <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:7px">SCHEDULE NEXT ROUND</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:#EDE9FE;color:#5B21B6;border:none" id="btn-sched-l2">📅 Schedule L2 Round</button>
+          <button class="btn btn-sm" style="background:#CFFAFE;color:#164E63;border:none" id="btn-sched-client">📅 Schedule Client Round</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('feedback-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Interview Log Modal -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="log-modal-title">Add Interview Log</h2><button class="modal-close" onclick="closeModal('log-modal')">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Client *</label><input id="lf-client" placeholder="e.g. Giniminds"></div>
+      <div class="form-group"><label>Candidate Name *</label><input id="lf-name" placeholder="Full name"></div>
+      <div class="form-group full"><label>Skill / Role *</label><input id="lf-skill" placeholder="e.g. Java Lead / Architect"></div>
+      <div class="form-group"><label>Interview Date</label><input type="date" id="lf-date"></div>
+      <div class="form-group"><label>Time</label><input type="time" id="lf-time"></div>
+      <div class="form-group full"><label>L1/L2 Status *</label>
+        <select id="lf-status">
+          <option value="">— Select Status —</option>
+          <option>Scheduled</option><option>No Show</option><option>Rescheduled</option>
+          <option>L1 Completed – Feedback Pending</option><option>L1 Select</option><option>L1 Reject</option><option>L1 On Hold</option>
+          <option>L2 Scheduled</option><option>L2 Completed – Feedback Pending</option>
+          <option>L2 Completed – Waiting for Client</option><option>L2 Reject</option><option>L2 On Hold</option>
+          <option>Final Select</option><option>On Hold</option><option>Waiting for Client Feedback</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Update / Notes</label><textarea id="lf-update" placeholder="Any additional notes…"></textarea></div>
+      <div class="form-group full"><label>Final Status</label><input id="lf-final" placeholder="e.g. Selected, Awaiting client…"></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('log-modal')">Cancel</button><button class="btn btn-primary" onclick="saveLog()">Save</button></div>
+  </div>
+</div>
+
+<!-- Selection Modal -->
+<div class="modal-overlay" id="sel-modal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="sel-modal-title">Add Selection</h2><button class="modal-close" onclick="cancelSelModal()">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Client *</label><input id="sf-client" placeholder="e.g. Giniminds"></div>
+      <div class="form-group"><label>Candidate Name *</label><input id="sf-name" placeholder="Full name"></div>
+      <div class="form-group full"><label>Skill / Designation *</label><input id="sf-skill" placeholder="e.g. Java Lead / Architect"></div>
+      <div class="form-group"><label>Phone</label><input id="sf-phone"></div>
+      <div class="form-group"><label>💰 Offer CTC *</label><input id="sf-ctc" placeholder="e.g. 9.5 LPA or 12,00,000"></div>
+      <div class="form-group"><label>📅 Date of Joining *</label><input type="date" id="sf-doj"></div>
+      <div class="form-group"><label>Status *</label>
+        <select id="sf-status">
+          <option value="">— Select Status —</option>
+          <option>Final Select</option><option>Offer Yet to Be Released</option><option>Offer Released</option>
+          <option>Joined</option><option>Offer Dropped</option><option>On Hold</option><option>Waiting for Client Feedback</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Comments</label><textarea id="sf-comments" placeholder="Any additional notes…"></textarea></div>
+    </div></div>
+    <div id="sel-audit-info" style="display:none;font-size:11px;color:var(--gray-400);padding:4px 0 10px 0;border-top:1px solid var(--gray-100);margin:0 0 2px"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="cancelSelModal()">Cancel</button><button class="btn btn-primary" onclick="saveSelection()">💾 Save &amp; Confirm Hire</button></div>
+  </div>
+</div>
+
+<!-- Bulk Upload Candidates Modal -->
+<div class="modal-overlay" id="bulk-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>📤 Bulk Upload Candidates</h2>
+      <button class="modal-close" onclick="closeModal('bulk-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1: Upload -->
+      <div id="bulk-step-1">
+        <div style="background:var(--gray-50);border:2px dashed var(--gray-300);border-radius:10px;padding:28px;text-align:center;margin-bottom:14px">
+          <div style="font-size:36px;margin-bottom:8px">📋</div>
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">Upload a CSV or Excel (.xlsx) file</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-bottom:14px">Rows with a blank Name or Email will be skipped</div>
+          <input type="file" id="bulk-file-input" accept=".csv,.xlsx,.xls" onchange="parseBulkFile(this)" style="display:none">
+          <button class="btn btn-primary" onclick="document.getElementById('bulk-file-input').click()">Choose File</button>
+        </div>
+        <div style="font-size:12px;color:var(--gray-600);background:#EFF6FF;padding:12px 14px;border-radius:8px;border:1px solid #BFDBFE;line-height:1.8">
+          <strong>Expected columns (first row = headers):</strong><br>
+          <code>Name*</code> &nbsp;·&nbsp; <code>Email*</code> &nbsp;·&nbsp; <code>Phone</code> &nbsp;·&nbsp; <code>Job Title</code> (must match an Open job) &nbsp;·&nbsp; <code>Stage</code> &nbsp;·&nbsp; <code>LinkedIn</code> &nbsp;·&nbsp; <code>Notes</code><br>
+          <span style="color:var(--gray-400);font-size:11px">* = required &nbsp;|&nbsp; Stage defaults to <em>Applied</em> if blank &nbsp;|&nbsp; Duplicate emails are skipped</span>
+        </div>
+      </div>
+      <!-- Step 2: Preview -->
+      <div id="bulk-step-2" style="display:none">
+        <div id="bulk-preview-stats" style="margin-bottom:12px;padding:10px 14px;background:#D1FAE5;border-radius:8px;border:1px solid #6EE7B7;font-size:13px"></div>
+        <div id="bulk-preview-errors" style="margin-bottom:10px"></div>
+        <div id="bulk-preview-table" style="max-height:340px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="resetBulkModal();closeModal('bulk-modal')">Cancel</button>
+      <button class="btn btn-primary" id="bulk-import-btn" onclick="importBulkCandidates()" style="display:none">✅ Import All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate Detail Modal -->
+<div class="modal-overlay" id="cand-detail-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h2 id="cand-detail-title">Candidate Details</h2><button class="modal-close" onclick="closeModal('cand-detail-modal')">✕</button></div>
+    <div class="modal-body" id="cand-detail-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('cand-detail-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Round Picker Modal -->
+<div class="modal-overlay" id="round-picker-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h2>Schedule Interview Round</h2><button class="modal-close" onclick="closeModal('round-picker-modal')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:16px">Which round for <strong id="rp-cand-name" style="color:var(--gray-900)"></strong>?</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <button onclick="pickRound('L1 Round')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px;border:2px solid #DBEAFE;background:#EFF6FF;cursor:pointer;text-align:left" onmouseenter="this.style.borderColor='#3B82F6'" onmouseleave="this.style.borderColor='#DBEAFE'">
+          <div style="font-size:22px">1️⃣</div><div><div style="font-weight:700;color:#1D4ED8">L1 Round</div><div style="font-size:11px;color:var(--gray-500)">First technical / HR screening</div></div>
+        </button>
+        <button onclick="pickRound('L2 Round')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px;border:2px solid #EDE9FE;background:#F5F3FF;cursor:pointer;text-align:left" onmouseenter="this.style.borderColor='#7C3AED'" onmouseleave="this.style.borderColor='#EDE9FE'">
+          <div style="font-size:22px">2️⃣</div><div><div style="font-weight:700;color:#5B21B6">L2 Round</div><div style="font-size:11px;color:var(--gray-500)">Second round / deep-dive technical</div></div>
+        </button>
+        <button onclick="pickRound('Client Round')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px;border:2px solid #CFFAFE;background:#F0FDFF;cursor:pointer;text-align:left" onmouseenter="this.style.borderColor='#0891B2'" onmouseleave="this.style.borderColor='#CFFAFE'">
+          <div style="font-size:22px">🤝</div><div><div style="font-weight:700;color:#164E63">Client Round</div><div style="font-size:11px;color:var(--gray-500)">Final client / stakeholder interview</div></div>
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('round-picker-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// SANDBOX / STORAGE DETECTION  (runs before anything else)
+// ═══════════════════════════════════════════════════════════
+// SharePoint renders HTML in a null-origin sandboxed iframe (about:srcdoc)
+// which throws SecurityError on any localStorage access.
+// Detect this FIRST so every subsequent call can branch safely.
+(function detectSandbox(){
+  try{localStorage.setItem('_hrp_sb','1');localStorage.removeItem('_hrp_sb');window._SANDBOX_MODE=false;}
+  catch(e){
+    window._SANDBOX_MODE=true;
+    window._NO_XLSX=true;
+    window._NO_CHART=true;
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const HAS_FSA = 'showOpenFilePicker' in window;
+const JOB_HDR  = ['id','title','dept','location','hm','status','openDate','desc','client','positions'];
+const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt'];
+const INT_HDR  = ['id','candidateId','jobId','date','time','type','status','interviewers','notes','feedback'];
+const LOG_HDR  = ['id','client','candidateName','skill','availDate','time','l1Status','update','finalStatus'];
+const SEL_HDR  = ['id','client','status','candidateName','skill','phone','offerCTC','doj','comments','createdBy','createdAt','modifiedBy','modifiedAt'];
+const AUDIT_HDR = ['id','timestamp','user','action','entity','recordId','summary'];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let jobs=[], candidates=[], intSchedule=[], intLog=[], selections=[];
+let nextJId=1,nextCId=1,nextISId=1,nextLId=1,nextSId=1;
+let editJId=null,editCId=null,editISId=null,editLId=null,editSId=null,activeFbId=null;
+let fileHandle=null,fileName='',saveTimer=null,activeIntTab='scheduled';
+// Pending-hire gate: tracks a hire in progress until CTC/DOJ is confirmed
+let _pendingHireCandId=null,_pendingHirePrevStage=null,_pendingHireSelId=null;
+let _currentUser=''; // set from login
+let _loggedInUser=null; // {username,role}
+let users=[]; // loaded from localStorage
+let _chgPwdTarget=null;
+let auditLog=[]; let nextAuditId=1;
+let _bulkRows=[];
+let _savedHandle=null;
+const _IDB={db:null};
+
+// ═══════════════════════════════════════════════════════════
+// STATUS NORMALIZATION (for legacy Excel data)
+// ═══════════════════════════════════════════════════════════
+function normL1(raw){
+  if(!raw)return'';const s=raw.toLowerCase().trim();
+  if(s.includes('no show')||s.includes('candi no show'))return'No Show';
+  if(s.includes('final select'))return'Final Select';
+  if(s.includes('l1 select'))return'L1 Select';
+  if(s.includes('l1 reject'))return'L1 Reject';
+  if(s.includes('l2 reject'))return'L2 Reject';
+  if(s.includes('l1 confirmed')||s.includes('calendar sent'))return'Scheduled';
+  if((s.includes('l1 completed')||s.includes('l1 complete'))&&(s.includes('feedback')||s.includes('peding')))return'L1 Completed – Feedback Pending';
+  if(s.includes('l1 completed'))return'L1 Completed – Feedback Pending';
+  if(s.includes('l2 completed')&&s.includes('waiting'))return'L2 Completed – Waiting for Client';
+  if(s.includes('l2 completed'))return'L2 Completed – Feedback Pending';
+  if(s.includes('l2 to be scheduled'))return'L2 Scheduled';
+  if(s.includes('client dropped')||s.includes('to be rescheduled'))return'Rescheduled';
+  if(s.includes('reschedule'))return'Rescheduled';
+  if(s.includes('next week'))return'Scheduled';
+  if(s.includes('on hold'))return'On Hold';
+  if(s.includes('waiting for client'))return'Waiting for Client Feedback';
+  return raw.trim();
+}
+function normSel(raw){
+  if(!raw)return'';const s=raw.toLowerCase().trim();
+  if(s==='joined')return'Joined';
+  if(s.includes('offer released'))return'Offer Released';
+  if(s.includes('offer dropped'))return'Offer Dropped';
+  if(s.includes('offer yet')||s.includes('offer to be')||s.includes('offer not released'))return'Offer Yet to Be Released';
+  if(s.includes('final select'))return'Final Select';
+  if(s.includes('on hold'))return'On Hold';
+  if(s.includes('waiting for client'))return'Waiting for Client Feedback';
+  return raw.trim();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROW MAPPERS
+// ═══════════════════════════════════════════════════════════
+function rowToJob(r){return{id:+r[0]||0,title:r[1]||'',dept:r[2]||'',location:r[3]||'',hm:r[4]||'',status:r[5]||'Open',openDate:r[6]||'',desc:r[7]||'',client:r[8]||'',positions:Math.max(1,+r[9]||1)};}
+function jobToRow(j){return[j.id,j.title,j.dept,j.location,j.hm,j.status,j.openDate,j.desc,j.client||'',j.positions||1];}
+function rowToCand(r){return{id:+r[0]||0,name:r[1]||'',email:r[2]||'',phone:r[3]||'',linkedin:r[4]||'',jobId:+r[5]||0,stage:r[6]||'Applied',appliedDate:r[7]||'',notes:r[8]||'',createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||''};}
+function candToRow(c){return[c.id,c.name,c.email,c.phone,c.linkedin||'',c.jobId,c.stage,c.appliedDate,c.notes||'',c.createdBy||'',c.createdAt||'',c.modifiedBy||'',c.modifiedAt||''];}
+function rowToIS(r){let fb=[];try{fb=JSON.parse(r[9]||'[]');}catch(e){}return{id:+r[0]||0,candidateId:+r[1]||0,jobId:+r[2]||0,date:r[3]||'',time:r[4]||'',type:r[5]||'',status:r[6]||'Scheduled',interviewers:(r[7]||'').split(',').map(s=>s.trim()).filter(Boolean),notes:r[8]||'',feedback:fb};}
+function isToRow(i){return[i.id,i.candidateId,i.jobId,i.date,i.time,i.type,i.status,i.interviewers.join(','),i.notes||'',JSON.stringify(i.feedback||[])];}
+function rowToLog(r){return{id:+r[0]||0,client:String(r[1]||'').trim(),candidateName:String(r[2]||'').trim(),skill:String(r[3]||'').trim(),availDate:r[4]||'',time:r[5]||'',l1Status:normL1(String(r[6]||'')),update:String(r[7]||'').trim(),finalStatus:String(r[8]||'').trim()};}
+function logToRow(l){return[l.id,l.client,l.candidateName,l.skill,l.availDate,l.time,l.l1Status,l.update,l.finalStatus];}
+function rowToSel(r){return{id:+r[0]||0,client:String(r[1]||'').trim(),status:normSel(String(r[2]||'')),candidateName:String(r[3]||'').trim(),skill:String(r[4]||'').trim(),phone:String(r[5]||'').replace('.0','').trim(),offerCTC:String(r[6]||'').trim(),doj:r[7]||'',comments:String(r[8]||'').trim(),createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||''};}
+function selToRow(s){return[s.id,s.client,s.status,s.candidateName,s.skill,s.phone,s.offerCTC,s.doj,s.comments,s.createdBy||'',s.createdAt||'',s.modifiedBy||'',s.modifiedAt||''];}
+
+// ═══════════════════════════════════════════════════════════
+// EXCEL I/O
+// ═══════════════════════════════════════════════════════════
+function parseWB(wb){
+  function ps(name,mapper){const ws=wb.Sheets[name];if(!ws)return[];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});return rows.slice(1).filter(r=>r[0]!==''&&r[0]!==undefined).map(mapper);}
+  jobs        = ps('Jobs',        rowToJob);
+  candidates  = ps('Candidates',  rowToCand);
+  intSchedule = ps('IntSchedule', rowToIS);
+  intLog      = ps('IntLog',      rowToLog);
+  selections  = ps('Selections',  rowToSel);
+  auditLog    = ps('AuditLog',    rowToAudit);
+  nextJId   = jobs.length       ? Math.max(...jobs.map(j=>j.id))+1       : 1;
+  nextCId   = candidates.length ? Math.max(...candidates.map(c=>c.id))+1 : 1;
+  nextISId  = intSchedule.length? Math.max(...intSchedule.map(i=>i.id))+1: 1;
+  nextLId   = intLog.length     ? Math.max(...intLog.map(l=>l.id))+1     : 1;
+  nextSId   = selections.length ? Math.max(...selections.map(s=>s.id))+1 : 1;
+  nextAuditId = auditLog.length ? Math.max(...auditLog.map(a=>a.id))+1 : 1;
+}
+function rowToAudit(r){return{id:+r[0]||0,timestamp:r[1]||'',user:r[2]||'',action:r[3]||'',entity:r[4]||'',recordId:r[5]||'',summary:r[6]||''};}
+function auditToRow(a){return[a.id,a.timestamp,a.user,a.action,a.entity,a.recordId,a.summary];}
+// ─── Field diff helper for detailed audit summaries ───
+function _diffFields(before, after, fields){
+  const changes=[];
+  fields.forEach(([key,label])=>{
+    const bv=String(before[key]||'').trim();
+    const av=String(after[key]||'').trim();
+    if(bv!==av) changes.push(`${label}: "${bv}"→"${av}"`);
+  });
+  return changes.length?changes.join(' | '):'(no changes)';
+}
+
+// ─── Audit logger ───
+function logAudit(action,entity,recordId,summary){
+  const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  auditLog.push({id:nextAuditId++,timestamp:now,user:_currentUser||'—',action,entity,recordId:String(recordId),summary});
+  scheduleSave();
+}
+
+function buildWB(){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([JOB_HDR, ...jobs.map(jobToRow)]),'Jobs');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([CAND_HDR,...candidates.map(candToRow)]),'Candidates');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([INT_HDR, ...intSchedule.map(isToRow)]),'IntSchedule');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([LOG_HDR, ...intLog.map(logToRow)]),'IntLog');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([SEL_HDR, ...selections.map(selToRow)]),'Selections');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([AUDIT_HDR,...auditLog.map(auditToRow)]),'AuditLog');
+  return wb;
+}
+async function loadWB(file){
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array',cellDates:false});
+  parseWB(wb);
+  document.getElementById('excel-filename').textContent=file.name;
+  document.getElementById('picker-screen').classList.add('hidden');
+  document.getElementById('sidebar').style.display='flex';
+  document.getElementById('main').style.display='block';
+  updateCounts();showPage('dashboard');
+}
+async function openExcelFile(){
+  try{
+    if(HAS_FSA){
+      const[h]=await window.showOpenFilePicker({types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+      fileHandle=h;fileName=h.name;
+      await _saveHandle(h);
+      await loadWB(await h.getFile());
+    }else{document.getElementById('file-input-hidden').click();}
+  }catch(e){if(e.name!=='AbortError')showErr(e.message);}
+}
+function loadFromInput(inp){const f=inp.files[0];if(!f){return;}fileName=f.name;loadWB(f);}
+async function createNewFile(){
+  jobs=[];candidates=[];intSchedule=[];intLog=[];selections=[];
+  nextJId=nextCId=nextISId=nextLId=nextSId=1;
+  if(HAS_FSA){
+    try{
+      fileHandle=await window.showSaveFilePicker({suggestedName:'HR-Recruitment-Data.xlsx',types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+      fileName=fileHandle.name;
+      await _saveHandle(fileHandle);
+      await doSave();
+      document.getElementById('sf-name').textContent=fileName;
+      document.getElementById('picker-screen').classList.add('hidden');
+      document.getElementById('sidebar').style.display='flex';
+      document.getElementById('main').style.display='block';
+      updateCounts();showPage('dashboard');
+    }catch(e){if(e.name!=='AbortError')showErr(e.message);}
+  }else{
+    fileName='HR-Recruitment-Data.xlsx';
+    document.getElementById('picker-screen').classList.add('hidden');
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main').style.display='block';
+    updateCounts();showPage('dashboard');
+  }
+}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(doSave,600);}
+// ── localStorage helpers for SharePoint/CDN-blocked environments ──
+function _lsSave(){
+  const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId};
+  try{localStorage.setItem('hrp_data',JSON.stringify(d));return true;}catch(e){return false;}
+}
+function _lsLoad(){
+  try{
+    const raw=localStorage.getItem('hrp_data');if(!raw)return false;
+    const d=JSON.parse(raw);
+    jobs=d.jobs||[];candidates=d.candidates||[];intSchedule=d.intSchedule||[];
+    intLog=d.intLog||[];selections=d.selections||[];auditLog=d.auditLog||[];
+    nextJId=d.nextJId||1;nextCId=d.nextCId||1;nextISId=d.nextISId||1;
+    nextLId=d.nextLId||1;nextSId=d.nextSId||1;nextAuditId=d.nextAuditId||1;
+    return true;
+  }catch(e){return false;}
+}
+function _showSandboxLoginNotice(){
+  // Inject a notice inside the login card explaining SharePoint preview mode
+  const card=document.querySelector('#login-gate > div');if(!card)return;
+  const notice=document.createElement('div');
+  notice.style.cssText='margin:0 0 16px;padding:12px 14px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;line-height:1.6;text-align:left';
+  notice.innerHTML='<strong>⚠️ SharePoint Preview Mode</strong><br>'
+    +'SharePoint is showing this file in a sandboxed preview that blocks browser storage. '
+    +'You can still log in and use the portal — but <em>data and logins will not be saved between sessions</em>.<br><br>'
+    +'<strong>To use with full persistence:</strong> ask the owner for the <em>direct file link</em> '
+    +'(not the "View" link), or click <strong>⋯ → Download</strong> in SharePoint and open the file locally.';
+  card.insertBefore(notice, card.querySelector('div[style*="margin-bottom:26px"]').nextSibling||card.firstChild);
+}
+function _adjustPickerForNoXlsx(){
+  const body=document.querySelector('.picker-body');if(!body)return;
+  let hasData=false;
+  try{hasData=!!localStorage.getItem('hrp_data');}catch(e){}
+  const btn=document.createElement('button');
+  btn.className='picker-btn';btn.style.borderColor='#059669';
+  btn.innerHTML='<div class="picker-btn-icon" style="background:#DCFCE7">💾</div>'
+    +'<div><strong style="color:#065F46">'+(hasData?'Continue from browser storage':'Start fresh (browser storage)')+'</strong>'
+    +'<span>'+(hasData?'Load your previously saved portal data':'Data will be saved in this browser')+'</span></div>';
+  btn.addEventListener('click',function(){
+    _lsLoad();
+    fileName='Browser Storage';
+    document.getElementById('picker-screen').classList.add('hidden');
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main').style.display='block';
+    updateCounts();showPage('dashboard');
+  });
+  body.insertBefore(btn,body.firstChild);
+  // Also add a divider after
+  const div=document.createElement('div');div.className='picker-divider';div.textContent='or use Excel file';
+  body.insertBefore(div,btn.nextSibling);
+}
+async function doSave(){
+  showSaveBar(true);
+  try{
+    // Fallback: when XLSX not available, persist to localStorage
+    if(window._NO_XLSX){_lsSave();showSaveBar(false);return;}
+    const wb=buildWB();
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    if(fileHandle&&HAS_FSA){const w=await fileHandle.createWritable();await w.write(new Blob([out]));await w.close();}
+    else XLSX.writeFile(wb,fileName||'HR-Recruitment-Data.xlsx');
+    showSaveBar(false);
+  }catch(e){showSaveBar(false,true);showErr('Save failed: '+e.message);}
+}
+async function reloadFromFile(){
+  if(fileHandle){await loadWB(await fileHandle.getFile());}
+  else document.getElementById('file-input-hidden').click();
+}
+function switchFile(){document.getElementById('picker-screen').classList.remove('hidden');}
+
+// ═══════════════════════════════════════════════════════════
+// INDEXEDDB AUTO-RECONNECT
+// ═══════════════════════════════════════════════════════════
+function _openIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('HRPortalDB',1);r.onupgradeneeded=e=>e.target.result.createObjectStore('handles');r.onsuccess=e=>{_IDB.db=e.target.result;res();};r.onerror=rej;});}
+async function _saveHandle(h){try{await _openIDB();const t=_IDB.db.transaction('handles','readwrite');t.objectStore('handles').put(h,'lastFile');}catch(e){}}
+async function _loadHandle(){try{await _openIDB();return new Promise((res,rej)=>{const t=_IDB.db.transaction('handles','readonly');const r=t.objectStore('handles').get('lastFile');r.onsuccess=()=>res(r.result);r.onerror=rej;});}catch(e){return null;}}
+async function tryAutoLoad(){
+  if(!HAS_FSA)return;
+  _savedHandle=await _loadHandle();
+  if(!_savedHandle)return;
+  try{
+    const perm=await _savedHandle.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){fileHandle=_savedHandle;fileName=_savedHandle.name;await loadWB(await fileHandle.getFile());return;}
+    document.getElementById('btn-reconnect').style.display='flex';
+    document.getElementById('btn-reconnect-label').textContent='Reconnect to: '+_savedHandle.name;
+    document.getElementById('btn-reconnect-sub').textContent=_savedHandle.name;
+  }catch(e){_savedHandle=null;}
+}
+async function reconnectLastFile(){
+  if(!_savedHandle)return;
+  try{
+    const perm=await _savedHandle.requestPermission({mode:'readwrite'});
+    if(perm==='granted'){fileHandle=_savedHandle;fileName=_savedHandle.name;await loadWB(await fileHandle.getFile());}
+    else showErr('Permission denied');
+  }catch(e){showErr('Could not reconnect: '+e.message);}
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showPage(name){
+  if(name==='auditlog')renderAuditLog();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  const titles={dashboard:'Dashboard',analytics:'Analytics',jobs:'Jobs',candidates:'Candidates',pipeline:'Pipeline',
+    'int-schedule':'Interview Schedule','int-log':'Interview Log (L1/L2)','selections':'Selections',auditlog:'Audit Log'};
+  document.getElementById('page-title').textContent=titles[name]||name;
+  const ta=document.getElementById('topbar-actions');
+  ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="reloadFromFile()">↻ Reload</button>';
+  if(name==='jobs')         ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openJobModal()">+ Add Job</button>';
+  if(name==='candidates'){ta.innerHTML+='<button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📤 Bulk Upload</button>';ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openCandModal()">+ Add Candidate</button>';}
+  if(name==='int-schedule') ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openISModal()">+ Schedule Interview</button>';
+  if(name==='int-log')      ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openLogModal()">+ Add to Log</button>';
+  if(name==='selections')   ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openSelModal()">+ Add Selection</button>';
+  if(name==='dashboard') renderDashboard();
+  if(name==='analytics')  renderAnalytics();
+  if(name==='jobs')       renderJobs();
+  if(name==='candidates') renderCandidates();
+  if(name==='pipeline')   renderPipeline();
+  if(name==='int-schedule') renderIntSchedule();
+  if(name==='int-log')    renderIntLog();
+  if(name==='selections') renderSelections();
+}
+function updateCounts(){
+  sv('cnt-jobs',jobs.filter(j=>j.status==='Open').length);
+  sv('cnt-cands',candidates.length);
+  sv('cnt-int-sched',intSchedule.filter(i=>i.status==='Scheduled').length);
+  sv('cnt-int-log',intLog.length);
+  sv('cnt-sel',selections.length);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard(){
+  const openJobs=jobs.filter(j=>j.status==='Open').length;
+  // Candidate stage counts
+  const csc=st=>candidates.filter(c=>c.stage===st).length;
+  const hired=csc('Hired');
+  // Interview Log: strictly separated counts (fixes L2→L1 mix-up)
+  const l1sel   =intLog.filter(i=>i.l1Status==='L1 Select').length;
+  const l1reject =intLog.filter(i=>i.l1Status==='L1 Reject').length;
+  const l1fb     =intLog.filter(i=>i.l1Status==='L1 Completed – Feedback Pending').length;
+  const l2prog   =intLog.filter(i=>['L2 Scheduled','L2 Completed – Feedback Pending','L2 Completed – Waiting for Client'].includes(i.l1Status)).length;
+  const l2reject =intLog.filter(i=>i.l1Status==='L2 Reject').length;
+  const finalSel =intLog.filter(i=>i.l1Status==='Final Select').length;
+  const noShow   =intLog.filter(i=>['No Show','Rescheduled'].includes(i.l1Status)).length;
+  const onHoldLog=intLog.filter(i=>i.l1Status==='On Hold').length;
+  const schedLog =intLog.filter(i=>i.l1Status==='Scheduled').length;
+  const waitCl   =intLog.filter(i=>i.l1Status==='Waiting for Client Feedback').length;
+  // Selection counts
+  const joined   =selections.filter(s=>s.status==='Joined').length;
+  const offerRel =selections.filter(s=>s.status==='Offer Released').length;
+  const offerYet =selections.filter(s=>s.status==='Offer Yet to Be Released').length;
+  const schedInt =intSchedule.filter(i=>i.status==='Scheduled').length;
+
+  // 8 KPI cards — clean separation: L1 Select ≠ Final Select
+  document.getElementById('dash-kpis').innerHTML=`
+    <div class="stat-card sc-info"><div class="sc-label">Open Jobs</div><div class="sc-value">${openJobs}</div><div class="sc-sub">${jobs.filter(j=>j.status==='On Hold').length} on hold</div></div>
+    <div class="stat-card sc-purple"><div class="sc-label">Total Candidates</div><div class="sc-value">${candidates.length}</div><div class="sc-sub">${hired} hired · ${csc('Interview')} in interview</div></div>
+    <div class="stat-card"><div class="sc-label">Scheduled Interviews</div><div class="sc-value">${schedInt}</div><div class="sc-sub">${intSchedule.filter(i=>i.status==='Completed').length} completed</div></div>
+    <div class="stat-card sc-green"><div class="sc-label">L1 Selected</div><div class="sc-value">${l1sel}</div><div class="sc-sub">${l2prog} progressed to L2</div></div>
+    <div class="stat-card sc-amber"><div class="sc-label">Final Selected</div><div class="sc-value">${finalSel}</div><div class="sc-sub">${selections.length} in selections · ${offerYet} offer pending</div></div>
+    <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release</div></div>
+    <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel} offer pending</div></div>
+    <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show</div><div class="sc-value">${l1reject+l2reject}</div><div class="sc-sub">${noShow} no show · ${onHoldLog} on hold</div></div>`;
+
+  // ── Candidate Pipeline (all stages) + Interview Log Status (all statuses)
+  const cpStages=[
+    {l:'Applied',  n:csc('Applied'),   c:'#3B82F6'},
+    {l:'Screening',n:csc('Screening'), c:'#F97316'},
+    {l:'Interview',n:csc('Interview'), c:'#8B5CF6'},
+    {l:'Offer',    n:csc('Offer'),     c:'#10B981'},
+    {l:'Hired',    n:csc('Hired'),     c:'#059669'},
+    {l:'On Hold',  n:csc('On Hold'),   c:'#F59E0B'},
+    {l:'Rejected', n:csc('Rejected'),  c:'#EF4444'},
+  ];
+  const mx1=Math.max(...cpStages.map(s=>s.n),1);
+  document.getElementById('dash-funnel').innerHTML=
+    `<div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Candidate Pipeline</div>`+
+    cpStages.map(s=>`<div class="pipe-stage"><div class="pipe-label">${s.l}</div><div class="pipe-bar-wrap"><div class="pipe-bar" style="width:${Math.max(s.n/mx1*100,3)}%;background:${s.c}">${s.n}</div></div><div class="pipe-cnt">${s.n}</div></div>`).join('');
+
+  // Upcoming interviews
+  const upcoming=[...intSchedule].filter(i=>i.status==='Scheduled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,5);
+  document.getElementById('dash-upcoming').innerHTML=upcoming.map(i=>{
+    const c=getCand(i.candidateId);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--gray-100)">
+      <div style="text-align:center;min-width:38px;background:var(--primary-light);border-radius:6px;padding:5px">
+        <div style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase">${new Date(i.date+'T00:00').toLocaleDateString('en-US',{month:'short'})}</div>
+        <div style="font-size:17px;font-weight:800;color:var(--primary);line-height:1">${new Date(i.date+'T00:00').getDate()}</div>
+      </div>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.name||'Unknown'}</div><div style="font-size:11px;color:var(--gray-400)">${i.type} · ${i.time}</div></div>
+      <span class="tag">${i.interviewers[0]||'—'}</span></div>`;
+  }).join('')||'<div class="empty-state">No upcoming interviews</div>';
+
+  // Recent candidates
+  const recent=[...candidates].sort((a,b)=>new Date(b.appliedDate)-new Date(a.appliedDate)).slice(0,5);
+  document.getElementById('dash-recent-cands').innerHTML=recent.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--gray-100)">
+    <div class="avatar" style="background:${avColor(c.name)}">${initials(c.name)}</div>
+    <div style="flex:1"><div style="font-weight:600;font-size:13px">${c.name}</div><div style="font-size:11px;color:var(--gray-400)">${getJob(c.jobId)?.title||'—'}</div></div>
+    <span class="badge b-${stageC(c.stage)}">${c.stage}</span></div>`).join('')||'<div class="empty-state">No candidates</div>';
+
+  // Log summary
+  const logRecent=[...intLog].sort((a,b)=>(b.availDate||'').localeCompare(a.availDate||'')).slice(0,5);
+  document.getElementById('dash-log-summary').innerHTML=logRecent.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--gray-100)">
+    <div style="flex:1"><div style="font-weight:600;font-size:13px">${l.candidateName}</div><div style="font-size:11px;color:var(--gray-400)">${l.skill||'—'} · ${l.client||'—'}</div></div>
+    <span class="badge ${l1BadgeC(l.l1Status)}" style="font-size:10px">${l.l1Status||'—'}</span></div>`).join('')||'<div class="empty-state">No log entries</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// JOBS
+// ═══════════════════════════════════════════════════════════
+function renderJobs(){
+  const s=gv('job-search').toLowerCase(),sf=gv('job-status-f'),df=gv('job-dept-f');
+  const depts=[...new Set(jobs.map(j=>j.dept))].sort();
+  const cur=document.getElementById('job-dept-f').value;
+  document.getElementById('job-dept-f').innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
+  const f=jobs.filter(j=>(!s||(j.title+j.dept).toLowerCase().includes(s))&&(!sf||j.status===sf)&&(!df||j.dept===df));
+  document.getElementById('jobs-tbody').innerHTML=f.map(j=>{
+    const cc=candidates.filter(c=>c.jobId===j.id).length;
+    return`<tr><td><div class="td-name">${j.title}</div><div class="td-sub">${j.desc?j.desc.slice(0,55)+'…':''}</div></td>
+    <td><span class="tag" style="background:#EDE9FE;color:#5B21B6;font-weight:600">${j.client||'—'}</span></td>
+    <td><span class="tag">${j.dept}</span></td><td style="font-size:12px">${j.location||'—'}</td><td style="font-size:12px">${j.hm||'—'}</td>
+    <td><span class="badge b-${statusC(j.status)}">${j.status}</span></td>
+    <td style="font-size:12px;text-align:center"><span style="font-weight:700">${j.positions||1}</span><span style="color:var(--gray-400)"> pos</span></td>
+    <td><a onclick="filterCandsByJob(${j.id})" style="color:var(--primary);cursor:pointer;font-weight:600">${cc}</a></td>
+    <td>${fmtDate(j.openDate)}</td>
+    <td><div class="actions-cell">
+      <button class="btn btn-icon btn-sm" onclick="viewJobPipeline(${j.id})" title="Pipeline">🗂</button>
+      <button class="btn btn-icon btn-sm" onclick="openJobModal(${j.id})" title="Edit">✏️</button>
+      <button class="btn btn-icon btn-sm" onclick="deleteJob(${j.id})" title="Delete">🗑</button>
+    </div></td></tr>`;
+  }).join('')||'<tr><td colspan="10" class="empty-state">No jobs found</td></tr>';
+}
+function openJobModal(id){
+  editJId=id||null;
+  sv('job-modal-title',id?'Edit Job':'Add Job');
+  if(id){const j=getJob(id);fv('jf-title',j.title);fv('jf-client',j.client||'');fv('jf-dept',j.dept);fv('jf-location',j.location);fv('jf-hm',j.hm);fv('jf-positions',j.positions||1);fv('jf-status',j.status);fv('jf-desc',j.desc);}
+  else{['jf-title','jf-client','jf-dept','jf-location','jf-hm','jf-desc'].forEach(x=>fv(x,''));fv('jf-positions',1);fv('jf-status','Open');}
+  openModal('job-modal');
+}
+function saveJob(){
+  const title=gv('jf-title'),dept=gv('jf-dept');
+  if(!title||!dept){showErr('Title and department required.');return;}
+  const data={title,client:gv('jf-client'),dept,location:gv('jf-location'),hm:gv('jf-hm'),positions:Math.max(1,+gv('jf-positions')||1),status:gv('jf-status'),desc:gv('jf-desc')};
+  if(editJId){
+    const jbefore={...getJob(editJId)};
+    Object.assign(getJob(editJId),data);
+    const diff=_diffFields(jbefore,data,[['title','Title'],['client','Client'],['dept','Dept'],['location','Location'],['hm','Hiring Mgr'],['status','Status'],['positions','Positions']]);
+    logAudit('Modified','Job',editJId,`"${data.title}" [${data.client||'—'}] — ${diff}`);
+  }else{const j={id:nextJId++,...data,openDate:today()};jobs.push(j);logAudit('Created','Job',j.id,`"${data.title}" [${data.client||'—'}], ${data.positions} position(s), status: ${data.status}`);}
+  closeModal('job-modal');renderJobs();updateCounts();scheduleSave();
+}
+function deleteJob(id){
+  if(!confirm('Delete this job and related candidates/interviews?'))return;
+  const j=getJob(id);
+  logAudit('Deleted','Job',id,`Job: "${j?.title||id}" [${j?.client||'—'}] deleted along with related candidates/interviews`);
+  jobs=jobs.filter(j=>j.id!==id);candidates=candidates.filter(c=>c.jobId!==id);intSchedule=intSchedule.filter(i=>i.jobId!==id);
+  renderJobs();updateCounts();scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CANDIDATES
+// ═══════════════════════════════════════════════════════════
+function renderCandidates(){
+  const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),jf=gv('cand-job-f');
+  const cur=document.getElementById('cand-job-f').value;
+  document.getElementById('cand-job-f').innerHTML='<option value="">All Jobs</option>'+jobs.map(j=>`<option value="${j.id}"${j.id==cur?' selected':''}>${j.title}</option>`).join('');
+  const f=candidates.filter(c=>(!s||(c.name+c.email).toLowerCase().includes(s))&&(!sf||c.stage===sf)&&(!jf||c.jobId==jf)).sort((a,b)=>new Date(b.appliedDate)-new Date(a.appliedDate));
+  document.getElementById('cands-tbody').innerHTML=f.map(c=>{
+    const job=getJob(c.jobId);
+    const ivs=[...new Set(intSchedule.filter(i=>i.candidateId===c.id).flatMap(i=>i.interviewers))].slice(0,2).join(', ');
+    return`<tr><td><div style="display:flex;align-items:center;gap:9px">
+      <div class="avatar" style="background:${avColor(c.name)};width:34px;height:34px;font-size:12px">${initials(c.name)}</div>
+      <div><div class="td-name">${c.name}</div><div class="td-sub">${c.email}</div></div></div></td>
+    <td><div style="font-size:13px">${job?.title||'—'}</div><div class="td-sub">${job?.dept||''}</div></td>
+    <td><span class="badge b-${stageC(c.stage)}">${c.stage}</span></td>
+    <td>${fmtDate(c.appliedDate)}</td>
+    <td style="font-size:12px;color:var(--gray-500)">${ivs||'—'}</td>
+    <td><div class="actions-cell">
+      <button class="btn btn-icon btn-sm" onclick="viewCandidate(${c.id})">👁</button>
+      <button class="btn btn-icon btn-sm" onclick="openCandModal(${c.id})">✏️</button>
+      <button class="btn btn-icon btn-sm" onclick="deleteCand(${c.id})">🗑</button>
+    </div></td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty-state">No candidates found</td></tr>';
+}
+function openCandModal(id){
+  editCId=id||null;sv('cand-modal-title',id?'Edit Candidate':'Add Candidate');
+  // When adding: only show Open/On Hold jobs. When editing: also keep the candidate's current job even if Closed.
+  const currentJobId=id?getCand(id)?.jobId:null;
+  const visibleJobs=jobs.filter(j=>j.status!=='Closed'||(currentJobId&&j.id===currentJobId));
+  document.getElementById('cf-job').innerHTML=visibleJobs.map(j=>`<option value="${j.id}">${j.title}${j.status==='Closed'?' [Closed]':j.status==='On Hold'?' [On Hold]':''}</option>`).join('')||'<option value="">— No open jobs —</option>';
+  if(id){const c=getCand(id);fv('cf-name',c.name);fv('cf-email',c.email);fv('cf-phone',c.phone);fv('cf-linkedin',c.linkedin||'');fv('cf-job',c.jobId);fv('cf-stage',c.stage);fv('cf-notes',c.notes);}
+  else{['cf-name','cf-email','cf-phone','cf-linkedin','cf-notes'].forEach(x=>fv(x,''));fv('cf-stage','Applied');}
+  openModal('cand-modal');
+}
+function saveCandidate(){
+  const name=gv('cf-name'),email=gv('cf-email'),jobId=+gv('cf-job');
+  if(!name||!email){showErr('Name and email required.');return;}
+  // Block adding a new candidate to a Closed job
+  if(!editCId){const selJob=getJob(jobId);if(selJob&&selJob.status==='Closed'){showErr(`Job "${selJob.title}" is Closed — cannot add candidates. Reopen the job first.`);return;}}
+  // Enforce unique candidate names — only block on CREATE; warn on EDIT
+  const dupeName=candidates.find(cx=>cx.name.trim().toLowerCase()===name.trim().toLowerCase()&&cx.id!==editCId);
+  if(dupeName&&!editCId){showErr(`A candidate named "${dupeName.name}" already exists. Use a middle initial or suffix to distinguish.`);return;}
+  const newStage=gv('cf-stage');
+  const prevStage=editCId?getCand(editCId)?.stage:'';
+  const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),jobId,stage:newStage,notes:gv('cf-notes')};
+  const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  let savedCand;
+  if(editCId){
+    const existing=getCand(editCId);
+    const cbefore={...existing};
+    Object.assign(existing,data);
+    existing.modifiedBy=_currentUser||'—';existing.modifiedAt=now;
+    savedCand=existing;
+    const cdiff=_diffFields(cbefore,data,[['name','Name'],['email','Email'],['phone','Phone'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
+    logAudit('Modified','Candidate',editCId,`${name} — ${cdiff}`);
+  }else{
+    const nc={id:nextCId++,...data,appliedDate:today(),createdBy:_currentUser||'—',createdAt:now,modifiedBy:'',modifiedAt:''};
+    candidates.push(nc);savedCand=nc;
+    logAudit('Created','Candidate',nc.id,`${name} applied for job #${jobId} (stage: ${newStage})`);
+  }
+  closeModal('cand-modal');renderCandidates();updateCounts();scheduleSave();
+  // Auto-create selection + job close check when stage is set to Hired
+  if(newStage==='Hired'&&prevStage!=='Hired'&&savedCand) autoCreateSelection(savedCand);
+}
+function deleteCand(id){
+  if(!confirm('Delete this candidate?'))return;
+  const cd=getCand(id);
+  logAudit('Deleted','Candidate',id,`${cd?.name||id} (stage: ${cd?.stage||'—'}) deleted`);
+  candidates=candidates.filter(c=>c.id!==id);intSchedule=intSchedule.filter(i=>i.candidateId!==id);
+  renderCandidates();updateCounts();scheduleSave();
+}
+function viewCandidate(id){
+  const c=getCand(id),job=getJob(c.jobId),cInts=intSchedule.filter(i=>i.candidateId===id);
+  sv('cand-detail-title',c.name);
+  document.getElementById('cand-detail-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <div class="avatar" style="background:${avColor(c.name)};width:52px;height:52px;font-size:17px">${initials(c.name)}</div>
+      <div><div style="font-size:17px;font-weight:800">${c.name}</div><div style="color:var(--gray-400);font-size:12px">${c.email}${c.phone?' · '+c.phone:''}</div>${c.linkedin?`<div style="font-size:12px;color:var(--primary)">${c.linkedin}</div>`:''}</div>
+      <span class="badge b-${stageC(c.stage)}" style="margin-left:auto;font-size:12px;padding:6px 12px">${c.stage}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div><div class="sec-title">Applied For</div><div style="font-weight:600">${job?.title||'—'} · ${job?.dept||''}</div></div>
+      <div><div class="sec-title">Applied Date</div><div style="font-weight:600">${fmtDate(c.appliedDate)}</div></div>
+    </div>
+    <div style="margin-bottom:14px"><div class="sec-title">Notes</div><div style="background:var(--gray-50);border-radius:7px;padding:11px;font-size:13px;border:1px solid var(--gray-200)">${c.notes||'—'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;font-size:11px;color:var(--gray-400)">
+      <div>Created by <strong>${c.createdBy||'—'}</strong>${c.createdAt?' on '+c.createdAt:''}</div>
+      <div>Last modified by <strong>${c.modifiedBy||'—'}</strong>${c.modifiedAt?' on '+c.modifiedAt:''}</div>
+    </div>
+    <div><div class="sec-title">Interviews (${cInts.length})</div>
+    ${cInts.map(i=>`<div style="background:var(--gray-50);border-radius:7px;padding:11px;border:1px solid var(--gray-200);margin-bottom:7px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${i.type} · ${fmtDate(i.date)} at ${i.time}</div><div style="font-size:11px;color:var(--gray-400)">${i.interviewers.join(', ')||'—'}</div></div>
+      <span class="badge b-${i.status.toLowerCase()}">${i.status}</span>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('cand-detail-modal');openFeedback(${i.id})">📝 Feedback</button></div>`).join('')||'<div style="color:var(--gray-400);font-size:13px">No interviews scheduled.</div>'}</div>`;
+  openModal('cand-detail-modal');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROUND PICKER + AUTO-FILL HELPERS
+// ═══════════════════════════════════════════════════════════
+let _rpCandId=null;
+function showRoundPicker(candId){
+  _rpCandId=candId;
+  const c=getCand(candId);
+  sv('rp-cand-name',c?.name||'');
+  openModal('round-picker-modal');
+}
+function pickRound(roundType){
+  closeModal('round-picker-modal');
+  scheduleNextRound(_rpCandId,roundType);
+}
+// Auto-fill Job when Candidate is changed in the Schedule modal
+function autoFillJobFromCand(){
+  const cand=getCand(+gv('isf-cand'));
+  if(cand&&cand.jobId) fv('isf-job',cand.jobId);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PIPELINE
+// ═══════════════════════════════════════════════════════════
+function scheduleNextRound(candId, roundType){
+  editISId=null;
+  const c=getCand(candId);
+  // Issue 1: block L2/Client if prior round feedback is missing
+  const L1_TYPES=['L1 Round','Phone Screen','Video Call','Technical'];
+  const L2_TYPES=['L2 Round'];
+  const isL2=(roundType==='L2 Round');
+  const isClient=(roundType==='Client Round'||roundType==='On-site');
+  if(isL2){
+    const pendingL1=intSchedule.filter(i=>i.candidateId===candId&&L1_TYPES.includes(i.type)&&i.feedback.length===0);
+    if(pendingL1.length){
+      showErr('Cannot schedule L2 Round — L1 feedback is still pending. Please submit L1 feedback first.');
+      return;
+    }
+  }
+  if(isClient){
+    const pendingL2=intSchedule.filter(i=>i.candidateId===candId&&L2_TYPES.includes(i.type)&&i.feedback.length===0);
+    if(pendingL2.length){
+      showErr('Cannot schedule Client Round — L2 feedback is still pending. Please submit L2 feedback first.');
+      return;
+    }
+  }
+  sv('int-sched-modal-title','Schedule '+roundType);
+  // Auto-advance stage to Interview for ANY round when candidate is still in Applied/Screening
+  if(c&&['Applied','Screening'].includes(c.stage)){c.stage='Interview';renderPipeline();updateCounts();scheduleSave();}
+  document.getElementById('isf-cand').innerHTML=candidates.map(x=>`<option value="${x.id}"${x.id===candId?' selected':''}>${x.name}</option>`).join('');
+  document.getElementById('isf-job').innerHTML=jobs.map(j=>`<option value="${j.id}"${j.id===(c?.jobId)?' selected':''}>${j.title}</option>`).join('');
+  fv('isf-type',roundType);fv('isf-date','');fv('isf-time','');fv('isf-interviewers','');fv('isf-notes','');fv('isf-status','Scheduled');
+  openModal('int-sched-modal');
+}
+function renderPipeline(){
+  const jf=document.getElementById('pipeline-job-f');
+  const cur=jf.value;
+  jf.innerHTML='<option value="">All Jobs</option>'+jobs.map(j=>`<option value="${j.id}"${j.id==cur?' selected':''}>${j.title}${j.client?' ('+j.client+')':''}</option>`).join('');
+  const jfVal=jf.value?+jf.value:null;
+  const stages=['Applied','Screening','Interview','Offer','Hired','On Hold','Rejected'];
+  const sc={Applied:'#3B82F6',Screening:'#F97316',Interview:'#8B5CF6',Offer:'#10B981',Hired:'#059669','On Hold':'#F59E0B',Rejected:'#EF4444'};
+  const nextS={Applied:'Screening',Screening:'Interview',Interview:'Offer',Offer:'Hired'};
+  document.getElementById('kanban-board').innerHTML=stages.map(stage=>{
+    const cands=candidates.filter(c=>c.stage===stage&&(!jfVal||c.jobId===jfVal));
+    const stageKey=stage.toLowerCase().replace(/ /g,'-');
+    return`<div class="kanban-col"><div class="kanban-col-header" style="color:${sc[stage]}">${stage}<span class="kanban-col-count">${cands.length}</span></div>
+    <div class="kanban-cards">${cands.map(c=>{
+      const job=getJob(c.jobId);
+      const pastInts=intSchedule.filter(i=>i.candidateId===c.id&&i.status==='Completed');
+      const lastRound=pastInts.length?pastInts[pastInts.length-1].type:'';
+      return`<div class="k-card kc-${stageKey}" onclick="viewCandidate(${c.id})">
+        <div class="kc-name">${c.name}</div>
+        <div class="kc-meta">${job?.title||'—'}${job?.client?' · <span style="color:#7C3AED">'+job.client+'</span>':''}</div>
+        <div class="kc-meta">${lastRound?'Last: '+lastRound:fmtDate(c.appliedDate)}</div>
+        <div class="kc-actions" onclick="event.stopPropagation()" style="flex-wrap:wrap;gap:3px">
+          ${nextS[stage]?`<button class="btn btn-sm btn-success" style="font-size:10px;padding:3px 6px" onclick="moveCand(${c.id},'${nextS[stage]}')">→ ${nextS[stage]}</button>`:''}
+          ${stage==='Screening'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#DBEAFE;color:#1D4ED8;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'L1 Round')">📅 L1</button>`:''}
+          ${stage==='Interview'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#EDE9FE;color:#5B21B6;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'L2 Round')">📅 L2</button><button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#CFFAFE;color:#164E63;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'Client Round')">📅 Client</button>`:''}
+          ${stage==='Offer'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#A7F3D0;color:#065F46;border:none;font-weight:700" onclick="moveCand(${c.id},'Hired')">✓ Hired</button>`:''}
+          ${!['Hired','Rejected'].includes(stage)?`<button class="btn btn-sm" style="font-size:10px;padding:3px 5px;background:var(--danger-light);color:var(--danger);border:none" onclick="moveCand(${c.id},'Rejected')">✕</button>`:''}
+          ${stage==='Rejected'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 5px;background:#EFF6FF;color:#1D4ED8;border:none" onclick="moveCand(${c.id},'Applied')">↩ Restore</button>`:''}
+        </div></div>`;
+    }).join('')||`<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--gray-400)">Empty</div>`}
+    </div></div>`;
+  }).join('');
+}
+function moveCand(id,stage){
+  const c=getCand(id);if(!c)return;
+  const prev=c.stage;
+  // Block Interview → Offer if there are still "Scheduled" interviews pending
+  if(stage==='Offer'&&prev==='Interview'){
+    const pending=intSchedule.filter(i=>i.candidateId===id&&i.status==='Scheduled');
+    if(pending.length){
+      showErr(`Cannot move to Offer — ${pending.length} interview(s) still Scheduled. Please complete the interview and submit feedback first.`);
+      return;
+    }
+  }
+  // Screening → Interview: pop round picker instead of just moving
+  if(stage==='Interview'&&prev==='Screening'){
+    showRoundPicker(id);
+    return; // stage move happens after round is picked inside scheduleNextRound
+  }
+  c.stage=stage;
+  if(stage==='Hired'&&prev!=='Hired'){
+    _pendingHireCandId=id;_pendingHirePrevStage=prev;_pendingHireSelId=null;
+    autoCreateSelection(c);
+  }
+  renderPipeline();updateCounts();scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERVIEW SCHEDULE
+// ═══════════════════════════════════════════════════════════
+function switchIntTab(tab,btn){activeIntTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderIntSchedule();}
+function renderIntSchedule(){
+  let f=[...intSchedule];
+  if(activeIntTab==='scheduled')f=f.filter(i=>i.status==='Scheduled');
+  if(activeIntTab==='completed')f=f.filter(i=>i.status==='Completed');
+  f.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!f.length){document.getElementById('int-sched-list').innerHTML='<div class="empty-state">No interviews in this view</div>';return;}
+  document.getElementById('int-sched-list').innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Candidate</th><th>Job</th><th>Date & Time</th><th>Type</th><th>Interviewers</th><th>Status</th><th>Feedback</th><th>Actions</th></tr></thead>
+    <tbody>${f.map(i=>{
+      const cand=getCand(i.candidateId),job=getJob(i.jobId),fb=i.feedback;
+      const avg=fb.length?(fb.reduce((s,f)=>s+f.rating,0)/fb.length).toFixed(1):null;
+      return`<tr><td><div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar" style="background:${cand?avColor(cand.name):'#999'};width:28px;height:28px;font-size:10px">${cand?initials(cand.name):'?'}</div>
+        <div class="td-name">${cand?.name||'Unknown'}</div></div></td>
+      <td style="font-size:12px">${job?.title||'—'}</td>
+      <td><div style="font-weight:600">${fmtDate(i.date)}</div><div class="td-sub">${i.time}</div></td>
+      <td><span class="tag">${i.type}</span></td>
+      <td style="font-size:12px;color:var(--gray-500)">${i.interviewers.join(', ')||'—'}</td>
+      <td><span class="badge b-${i.status.toLowerCase()}">${i.status}</span></td>
+      <td>${avg?`<span style="font-size:12px;color:var(--warning)">★ ${avg} (${fb.length})</span>`:'<span style="font-size:12px;color:var(--gray-400)">None</span>'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-sm btn-primary" onclick="openFeedback(${i.id})">📝 Feedback</button>
+        <button class="btn btn-icon btn-sm" onclick="openISModal(${i.id})">✏️</button>
+        <button class="btn btn-icon btn-sm" onclick="deleteIS(${i.id})">🗑</button>
+      </div></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+function openISModal(id){
+  editISId=id||null;sv('int-sched-modal-title',id?'Edit Interview':'Schedule Interview');
+  document.getElementById('isf-cand').innerHTML=candidates.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('isf-job').innerHTML=jobs.map(j=>`<option value="${j.id}">${j.title}</option>`).join('');
+  if(id){const i=getIS(id);fv('isf-cand',i.candidateId);fv('isf-job',i.jobId);fv('isf-date',i.date);fv('isf-time',i.time);fv('isf-type',i.type);fv('isf-status',i.status);fv('isf-interviewers',i.interviewers.join(', '));fv('isf-notes',i.notes);}
+  else{['isf-date','isf-time','isf-interviewers','isf-notes'].forEach(x=>fv(x,''));fv('isf-status','Scheduled');autoFillJobFromCand();}
+  openModal('int-sched-modal');
+}
+function saveIntSched(){
+  const date=gv('isf-date'),time=gv('isf-time');
+  if(!date||!time){showErr('Date and time required.');return;}
+  const data={candidateId:+gv('isf-cand'),jobId:+gv('isf-job'),date,time,type:gv('isf-type'),status:gv('isf-status'),interviewers:gv('isf-interviewers').split(',').map(s=>s.trim()).filter(Boolean),notes:gv('isf-notes')};
+  const cname=getCand(data.candidateId)?.name||'#'+data.candidateId;
+  if(editISId){
+    const isbefore={...getIS(editISId)};
+    Object.assign(getIS(editISId),data);
+    const isdiff=_diffFields(isbefore,data,[['date','Date'],['time','Time'],['type','Type'],['status','Status'],['interviewers','Interviewers']]);
+    logAudit('Modified','Interview',editISId,`${cname} — ${isdiff}`);
+  }else{const is={id:nextISId++,...data,feedback:[]};intSchedule.push(is);logAudit('Created','Interview',is.id,`${cname} — ${data.type} on ${data.date} at ${data.time}`);}
+  closeModal('int-sched-modal');renderIntSchedule();renderPipeline();updateCounts();scheduleSave();
+}
+function deleteIS(id){
+  if(!confirm('Delete this interview?'))return;
+  const is=getIS(id),cname=getCand(is?.candidateId)?.name||'#'+(is?.candidateId||id);
+  logAudit('Deleted','Interview',id,`${cname} — ${is?.type||'?'} on ${is?.date||'?'} deleted`);
+  intSchedule=intSchedule.filter(i=>i.id!==id);renderIntSchedule();updateCounts();scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════
+// FEEDBACK
+// ═══════════════════════════════════════════════════════════
+function openFeedback(id){
+  activeFbId=id;
+  const i=getIS(id),cand=getCand(i.candidateId),job=getJob(i.jobId);
+  sv('fb-modal-title','Feedback – '+(cand?.name||'Candidate'));
+  document.getElementById('fb-int-info').innerHTML=`<div style="display:flex;gap:20px;flex-wrap:wrap">
+    <div><div style="font-size:11px;color:var(--gray-400);font-weight:600">Candidate</div><div style="font-weight:700">${cand?.name||'—'}</div></div>
+    <div><div style="font-size:11px;color:var(--gray-400);font-weight:600">Job</div><div style="font-weight:700">${job?.title||'—'}</div></div>
+    <div><div style="font-size:11px;color:var(--gray-400);font-weight:600">Interview</div><div style="font-weight:700">${i.type} · ${fmtDate(i.date)} ${i.time}</div></div>
+    <div><div style="font-size:11px;color:var(--gray-400);font-weight:600">Status</div><span class="badge b-${i.status.toLowerCase()}">${i.status}</span></div>
+  </div>`;
+  renderFbList(i);renderStageButtons(cand,i);
+  document.getElementById('fb-form').style.display='none';
+  openModal('feedback-modal');
+}
+function renderFbList(i){
+  const rl={proceed:'Proceed',hold:'Hold',reject:'Reject'};
+  document.getElementById('fb-list').innerHTML=i.feedback.length
+    ?i.feedback.map(f=>`<div class="feedback-item"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+      <div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${avColor(f.name)};width:26px;height:26px;font-size:10px">${initials(f.name)}</div><strong style="font-size:13px">${f.name}</strong></div>
+      <div style="display:flex;align-items:center;gap:7px"><span class="stars">${'★'.repeat(f.rating)+'☆'.repeat(5-f.rating)}</span><span class="rec-badge rec-${f.rec}">${rl[f.rec]}</span></div>
+      </div><div style="font-size:13px;color:var(--gray-600);line-height:1.5">${f.comments}</div></div>`).join('')
+    :`<div style="text-align:center;padding:18px;color:var(--gray-400);font-size:13px;background:var(--gray-50);border-radius:8px;border:1px dashed var(--gray-300)">No feedback yet. Click "Add Feedback" above.</div>`;
+}
+function renderStageButtons(cand,i){
+  const stages=['Applied','Screening','Interview','Offer','Hired','On Hold','Rejected'];
+  document.getElementById('fb-stage-btns').innerHTML=stages.map(s=>`<button class="btn btn-sm ${cand.stage===s?'btn-primary':'btn-secondary'}" onclick="updateCandStage(${cand.id},'${s}')">${cand.stage===s?'✓ ':''}${s}</button>`).join('');
+}
+// Shared helper — called from both Pipeline moveCand and Feedback modal
+function autoCreateSelection(c){
+  const job=getJob(c.jobId);
+  const client=job?.client||job?.hm||job?.dept||'';
+  const skill=job?.title||'';
+  const existing=selections.find(s=>s.candidateName===c.name&&s.skill===skill&&s.client===client);
+  if(!existing){
+    const newId=nextSId++;
+    if(_pendingHireCandId!==null)_pendingHireSelId=newId; // track so Cancel can remove it
+    selections.push({id:newId,client,status:'Final Select',candidateName:c.name,skill,phone:c.phone||'',offerCTC:'',doj:'',comments:''});
+    // Auto-close job if all positions filled
+    if(job){
+      const hiredCount=candidates.filter(x=>x.jobId===c.jobId&&x.stage==='Hired').length;
+      const positions=job.positions||1;
+      if(hiredCount>=positions&&job.status!=='Closed'){
+        job.status='Closed';
+        showMsg(`✓ "${job.title}" closed — all ${positions} position(s) filled.`);
+        renderJobs(); // refresh Jobs table so status shows 'Closed' immediately
+      }
+    }
+    updateCounts();scheduleSave();
+    // Open offer details form immediately so user can fill CTC & DOJ
+    setTimeout(()=>openOfferModal(newId,c.name),350);
+    return true;
+  } else {
+    // Record already exists — open it so user can update
+    setTimeout(()=>openOfferModal(existing.id,c.name),350);
+  }
+  return false;
+}
+// Dedicated offer modal — opens Selection form with emphasis on CTC & DOJ
+function openOfferModal(selId,fallbackName){
+  // Close any open modals first
+  document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+  const s=getSel(selId);if(!s)return;
+  editSId=selId;
+  // Use fallbackName if the stored candidateName is missing (covers all code paths)
+  const displayName=s.candidateName||fallbackName||'';
+  if(!s.candidateName&&displayName){s.candidateName=displayName;} // patch the record too
+  sv('sel-modal-title','💰 Enter Offer Details — '+displayName);
+  // Update footer button to show "confirm hire" intent
+  const saveBtn=document.querySelector('#sel-modal .modal-footer .btn-primary');
+  if(saveBtn)saveBtn.textContent='💾 Save & Confirm Hire';
+  fv('sf-client',s.client);fv('sf-name',displayName);fv('sf-skill',s.skill);
+  fv('sf-phone',s.phone);fv('sf-ctc',s.offerCTC);fv('sf-doj',s.doj);
+  fv('sf-status',s.status||'Final Select');fv('sf-comments',s.comments);
+  // Highlight CTC & DOJ fields
+  setTimeout(()=>{
+    const ctc=document.getElementById('sf-ctc');
+    if(ctc){ctc.style.borderColor='var(--primary)';ctc.style.boxShadow='0 0 0 3px rgba(79,70,229,.15)';ctc.focus();}
+  },100);
+  openModal('sel-modal');
+}
+function updateCandStage(candId,stage){
+  const c=getCand(candId);if(!c)return;
+  const prevStage=c.stage;
+  c.stage=stage;
+  const i=getIS(activeFbId);
+  if(['Hired','Rejected'].includes(stage))i.status='Completed';
+  if(stage==='Hired'&&prevStage!=='Hired'){
+    _pendingHireCandId=candId;_pendingHirePrevStage=prevStage;_pendingHireSelId=null;
+    autoCreateSelection(c);
+  }
+  renderStageButtons(c,i);scheduleSave();
+}
+function showFbForm(){document.getElementById('fb-form').style.display='block';['fb-name','fb-comments'].forEach(x=>fv(x,''));fv('fb-rating','3');fv('fb-rec','proceed');document.getElementById('fb-name').focus();}
+function submitFeedback(){
+  const name=gv('fb-name'),comments=gv('fb-comments');
+  if(!name||!comments){showErr('Name and comments required.');return;}
+  const i=getIS(activeFbId);
+  const cand=getCand(i.candidateId);
+  const rec=gv('fb-rec');
+  i.feedback.push({name,rating:+gv('fb-rating'),rec,comments});
+  i.status='Completed';
+  // Determine new log status based on interview round and recommendation
+  const roundMap={
+    'L1 Round':    {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
+    'Phone Screen':{proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
+    'Video Call':  {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
+    'Technical':   {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
+    'L2 Round':    {proceed:'Final Select', hold:'L2 On Hold', reject:'L2 Reject'},
+    'Client Round':{proceed:'Final Select', hold:'L2 Completed – Waiting for Client', reject:'L2 Reject'},
+    'On-site':     {proceed:'Final Select', hold:'L2 Completed – Waiting for Client', reject:'L2 Reject'},
+  };
+  const newStatus=(roundMap[i.type]||{})[rec];
+  if(newStatus&&cand){
+    const job=getJob(i.jobId);
+    // Update existing log entry: try exact date match first,
+    // then fall back to most-recent "pending" entry for same candidate
+    // (fixes: old 'L1 Completed – Feedback Pending' staying when dates differ)
+    const PENDING=['Scheduled','L1 Completed – Feedback Pending','L2 Completed – Feedback Pending','L2 Completed – Waiting for Client','Waiting for Client Feedback','L1 On Hold','L2 On Hold'];
+    let existing=intLog.find(l=>l.candidateName===cand.name&&l.availDate===i.date);
+    if(!existing){
+      existing=[...intLog]
+        .filter(l=>l.candidateName===cand.name&&PENDING.includes(l.l1Status))
+        .sort((a,b)=>(b.availDate||'').localeCompare(a.availDate||''))[0];
+    }
+    if(existing){
+      existing.l1Status=newStatus;
+      existing.update=comments;
+      if(!existing.availDate)existing.availDate=i.date;
+    } else {
+      intLog.push({id:nextLId++,client:job?.client||job?.hm||job?.dept||'',candidateName:cand.name,skill:job?.title||'',availDate:i.date,time:i.time,l1Status:newStatus,update:comments,finalStatus:''});
+    }
+    showMsg('✓ Feedback saved · Log updated to "'+newStatus+'"');
+  } else {
+    showMsg('✓ Feedback saved');
+  }
+  // Issue 3: auto-move candidate stage on hold/reject
+  if(cand){
+    if(rec==='reject'&&cand.stage!=='Rejected'){cand.stage='Rejected';renderPipeline();}
+    else if(rec==='hold'&&!['On Hold','Rejected'].includes(cand.stage)){cand.stage='On Hold';renderPipeline();}
+  }
+  document.getElementById('fb-form').style.display='none';
+  renderFbList(i);renderStageButtons(getCand(i.candidateId),i);
+  // Show next-round scheduling buttons when proceed on L1/L2
+  const nrDiv=document.getElementById('fb-next-round-btns');
+  const candId=i.candidateId;
+  if(rec==='proceed'&&(i.type==='L1 Round'||i.type==='Phone Screen'||i.type==='Video Call'||i.type==='Technical')){
+    nrDiv.style.display='block';
+    document.getElementById('btn-sched-l2').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'L2 Round');};
+    document.getElementById('btn-sched-client').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'Client Round');};
+  } else if(rec==='proceed'&&i.type==='L2 Round'){
+    nrDiv.style.display='block';
+    document.getElementById('btn-sched-l2').style.display='none';
+    document.getElementById('btn-sched-client').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'Client Round');};
+  } else {
+    nrDiv.style.display='none';
+  }
+  // Issue 2: refresh interview schedule + log tables immediately
+  renderIntSchedule();
+  renderIntLog();
+  updateCounts();scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERVIEW LOG
+// ═══════════════════════════════════════════════════════════
+function renderIntLog(){
+  const s=gv('log-search').toLowerCase(),cf=gv('log-client-f'),sf=gv('log-status-f');
+  const cur=document.getElementById('log-client-f').value;
+  const clients=[...new Set(intLog.map(l=>l.client).filter(Boolean))].sort();
+  document.getElementById('log-client-f').innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  const f=intLog.filter(l=>(!s||(l.candidateName+l.skill).toLowerCase().includes(s))&&(!cf||l.client===cf)&&(!sf||l.l1Status===sf)).sort((a,b)=>(b.availDate||'').localeCompare(a.availDate||''));
+  document.getElementById('log-tbody').innerHTML=f.map(l=>`<tr>
+    <td><div style="font-weight:600">${fmtDate(l.availDate)}</div></td>
+    <td style="font-size:12px;color:var(--gray-500)">${fmtTime(l.time)}</td>
+    <td><div class="td-name">${l.candidateName||'—'}</div></td>
+    <td style="max-width:180px;font-size:12px;color:var(--gray-600)">${l.skill||'—'}</td>
+    <td><span class="tag">${l.client||'—'}</span></td>
+    <td><span class="badge ${l1BadgeC(l.l1Status)}">${l.l1Status||'—'}</span></td>
+    <td style="max-width:180px;font-size:12px;color:var(--gray-500)">${l.update||'—'}</td>
+    <td><div class="actions-cell">
+      <button class="btn btn-icon btn-sm" onclick="openLogModal(${l.id})">✏️</button>
+      <button class="btn btn-icon btn-sm" onclick="deleteLog(${l.id})">🗑</button>
+    </div></td></tr>`).join('')||'<tr><td colspan="8" class="empty-state">No records found</td></tr>';
+  document.getElementById('log-footer').textContent=`Showing ${f.length} of ${intLog.length} records`;
+}
+function openLogModal(id){
+  editLId=id||null;sv('log-modal-title',id?'Edit Log Entry':'Add Interview Log');
+  if(id){const l=getLog(id);fv('lf-client',l.client);fv('lf-name',l.candidateName);fv('lf-skill',l.skill);fv('lf-date',l.availDate);fv('lf-time',l.time);fv('lf-status',l.l1Status);fv('lf-update',l.update);fv('lf-final',l.finalStatus);}
+  else{['lf-client','lf-name','lf-skill','lf-date','lf-time','lf-update','lf-final'].forEach(x=>fv(x,''));fv('lf-status','');}
+  openModal('log-modal');
+}
+function saveLog(){
+  const name=gv('lf-name'),client=gv('lf-client');
+  if(!name||!client){showErr('Client and Candidate Name required.');return;}
+  const data={client,candidateName:name,skill:gv('lf-skill'),availDate:gv('lf-date'),time:gv('lf-time'),l1Status:gv('lf-status'),update:gv('lf-update'),finalStatus:gv('lf-final')};
+  if(editLId){
+    const rec=getLog(editLId);
+    if(rec)Object.assign(rec,data);
+    else intLog.push({id:nextLId++,...data}); // fallback: id not found, create new
+  } else {
+    intLog.push({id:nextLId++,...data});
+  }
+  if(editLId){
+    const lgbefore={...getLog(editLId)};
+    const lgdiff=_diffFields(lgbefore,data,[['candidateName','Candidate'],['client','Client'],['skill','Skill'],['l1Status','L1 Status'],['finalStatus','Final Status'],['update','Update']]);
+    logAudit('Modified','Interview Log',editLId,`${data.candidateName} [${data.client}] — ${lgdiff}`);
+  }else{const lid=intLog[intLog.length-1]?.id||'?';logAudit('Created','Interview Log',lid,`${data.candidateName} [${data.client}] — skill: ${data.skill||'—'}, status: ${data.l1Status}`);}
+  editLId=null;
+  closeModal('log-modal');
+  renderIntLog();updateCounts();scheduleSave();
+}
+function deleteLog(id){
+  if(!confirm('Delete this log entry?'))return;
+  const lg=getLog(id);
+  logAudit('Deleted','Interview Log',id,`${lg?.candidateName||id} [${lg?.client||'—'}] deleted`);
+  intLog=intLog.filter(l=>l.id!==id);renderIntLog();updateCounts();scheduleSave();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SELECTIONS
+// ═══════════════════════════════════════════════════════════
+function renderSelections(){
+  const s=gv('sel-search').toLowerCase(),cf=gv('sel-client-f'),sf=gv('sel-status-f');
+  const cur=document.getElementById('sel-client-f').value;
+  const clients=[...new Set(selections.map(s=>s.client).filter(Boolean))].sort();
+  document.getElementById('sel-client-f').innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  const f=selections.filter(s2=>(!s||(s2.candidateName+s2.skill).toLowerCase().includes(s))&&(!cf||s2.client===cf)&&(!sf||s2.status===sf));
+  document.getElementById('sel-tbody').innerHTML=f.map(s2=>`<tr>
+    <td><div class="td-name">${s2.candidateName||'—'}</div></td>
+    <td style="font-size:12px;color:var(--gray-600)">${s2.skill||'—'}</td>
+    <td><span class="tag">${s2.client||'—'}</span></td>
+    <td style="font-size:12px">${s2.phone||'—'}</td>
+    <td style="font-weight:700;font-size:13px">${s2.offerCTC||'—'}</td>
+    <td style="font-size:12px">${fmtDate(s2.doj)}</td>
+    <td><span class="badge ${selBadgeC(s2.status)}">${s2.status||'—'}</span></td>
+    <td style="max-width:200px;font-size:12px;color:var(--gray-500)">${s2.comments||'—'}</td>
+    <td><div class="actions-cell" style="flex-wrap:wrap;gap:3px">
+      ${['Final Select','Offer Yet to Be Released'].includes(s2.status)?`<button class="btn btn-sm" style="font-size:10px;padding:3px 7px;background:#DBEAFE;color:#1D4ED8;border:none;font-weight:700" onclick="quickSelStatus(${s2.id},'Offer Released')" title="Mark Offer Released">📤 Offer</button>`:''}
+      ${s2.status==='Offer Released'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 7px;background:#D1FAE5;color:#065F46;border:none;font-weight:700" onclick="quickSelStatus(${s2.id},'Joined')" title="Mark Joined">✅ Joined</button>`:''}
+      <button class="btn btn-icon btn-sm" onclick="openSelModal(${s2.id})" title="Edit">✏️</button>
+      <button class="btn btn-icon btn-sm" onclick="deleteSel(${s2.id})" title="Delete">🗑</button>
+    </div></td></tr>`).join('')||'<tr><td colspan="9" class="empty-state">No selections found</td></tr>';
+  const joined=f.filter(s=>s.status==='Joined').length;
+  document.getElementById('sel-footer').textContent=`${f.length} records · ${joined} joined · ${f.filter(s=>['Offer Released','Offer Yet to Be Released'].includes(s.status)).length} offers pending`;
+}
+function openSelModal(id){
+  editSId=id||null;
+  // Reset pending-hire state since this is a manual open (not triggered by hire flow)
+  _pendingHireCandId=null;_pendingHirePrevStage=null;_pendingHireSelId=null;
+  sv('sel-modal-title',id?'Edit Selection':'Add Selection');
+  // Change footer button text back to plain "Save" for manual edits
+  const saveBtn=document.querySelector('#sel-modal .modal-footer .btn-primary');
+  if(saveBtn)saveBtn.textContent='Save';
+  if(id){const s=getSel(id);fv('sf-client',s.client);fv('sf-name',s.candidateName);fv('sf-skill',s.skill);fv('sf-phone',s.phone);fv('sf-ctc',s.offerCTC);fv('sf-doj',s.doj);fv('sf-status',s.status);fv('sf-comments',s.comments);}
+  else{['sf-client','sf-name','sf-skill','sf-phone','sf-ctc','sf-doj','sf-comments'].forEach(x=>fv(x,''));fv('sf-status','');}
+  // Show audit trail for existing records
+  const auditDiv=document.getElementById('sel-audit-info');
+  if(auditDiv){
+    if(id){
+      const sr=getSel(id);
+      const parts=[];
+      if(sr.createdBy)parts.push('<span>Created by <strong>'+sr.createdBy+'</strong>'+(sr.createdAt?' on '+sr.createdAt:'')+'</span>');
+      if(sr.modifiedBy)parts.push('<span>Last modified by <strong>'+sr.modifiedBy+'</strong>'+(sr.modifiedAt?' on '+sr.modifiedAt:'')+'</span>');
+      auditDiv.innerHTML=parts.length?parts.join(' &nbsp;·&nbsp; '):'';
+      auditDiv.style.display=parts.length?'':'none';
+    }else{auditDiv.style.display='none';}
+  }
+  openModal('sel-modal');
+}
+// Cancel the sel-modal — if a hire is pending, revert candidate stage and remove selection
+function cancelSelModal(){
+  if(_pendingHireCandId!==null){
+    const c=getCand(_pendingHireCandId);
+    if(c)c.stage=_pendingHirePrevStage||'Offer';
+    if(_pendingHireSelId!==null)selections=selections.filter(s=>s.id!==_pendingHireSelId);
+    const prev=_pendingHirePrevStage;
+    _pendingHireCandId=null;_pendingHirePrevStage=null;_pendingHireSelId=null;
+    renderPipeline();renderSelections();updateCounts();scheduleSave();
+    showMsg('Hire cancelled — candidate moved back to '+( prev||'previous stage'));
+  }
+  closeModal('sel-modal');
+}
+function saveSelection(){
+  const ctcEl=document.getElementById('sf-ctc');if(ctcEl){ctcEl.style.borderColor='';ctcEl.style.boxShadow='';}
+  const name=gv('sf-name'),client=gv('sf-client');
+  if(!name||!client){showErr('Client and Candidate Name required.');return;}
+  // When confirming a hire, CTC is mandatory — force entry before status is committed
+  if(_pendingHireCandId!==null&&!gv('sf-ctc').trim()){
+    if(ctcEl){ctcEl.style.borderColor='var(--danger)';ctcEl.style.boxShadow='0 0 0 3px rgba(239,68,68,.2)';ctcEl.focus();}
+    showErr('Offer CTC is required to confirm the hire. Fill it in, or press Cancel to revert.');
+    return;
+  }
+  const newStatus=gv('sf-status');
+  const prevStatus=editSId?getSel(editSId)?.status:'';
+  // DOJ is mandatory when marking as Joined
+  if(newStatus==='Joined'&&!gv('sf-doj').trim()){
+    const dojEl=document.getElementById('sf-doj');
+    if(dojEl){dojEl.style.borderColor='var(--danger)';dojEl.style.boxShadow='0 0 0 3px rgba(239,68,68,.2)';dojEl.focus();}
+    showErr('Date of Joining (DOJ) is required before marking as Joined.');
+    return;
+  }
+  const data={client,status:newStatus,candidateName:name,skill:gv('sf-skill'),phone:gv('sf-phone'),offerCTC:gv('sf-ctc'),doj:gv('sf-doj'),comments:gv('sf-comments')};
+  const now2=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(editSId){
+    const sr=getSel(editSId);
+    const srbefore={...sr};
+    Object.assign(sr,data);
+    sr.modifiedBy=_currentUser||'—';sr.modifiedAt=now2;
+    const srdiff=_diffFields(srbefore,data,[['status','Status'],['offerCTC','CTC'],['doj','DOJ'],['candidateName','Candidate'],['client','Client'],['skill','Skill'],['phone','Phone'],['comments','Comments']]);
+    logAudit('Modified','Selection',editSId,`${data.candidateName} [${data.client}] — ${srdiff}`);
+  }else{
+    const ns={id:nextSId++,...data,createdBy:_currentUser||'—',createdAt:now2,modifiedBy:'',modifiedAt:''};
+    selections.push(ns);
+    logAudit('Created','Selection',ns.id,`${data.candidateName} [${data.client}] — ${data.status}${data.offerCTC?', CTC: '+data.offerCTC:''}`);
+  }
+  // Hire confirmed — clear pending gate
+  _pendingHireCandId=null;_pendingHirePrevStage=null;_pendingHireSelId=null;
+  // Sync candidate stage: Offer Dropped → Rejected | Joined → Hired (confirmed)
+  syncCandFromSel(name,newStatus,prevStatus);
+  closeModal('sel-modal');renderSelections();renderCandidates();renderPipeline();updateCounts();scheduleSave();
+}
+function deleteSel(id){
+  if(!confirm('Delete this selection?'))return;
+  const sl=getSel(id);
+  logAudit('Deleted','Selection',id,`${sl?.candidateName||id} [${sl?.client||'—'}] (${sl?.status||'—'}) deleted`);
+  selections=selections.filter(s=>s.id!==id);renderSelections();updateCounts();scheduleSave();
+}
+function quickSelStatus(id,status){
+  const s=getSel(id);if(!s)return;
+  // Block Joined unless DOJ is already filled
+  if(status==='Joined'&&!s.doj){
+    showErr('Please edit this selection and fill in the Date of Joining (DOJ) before marking as Joined.');
+    openSelModal(id);
+    return;
+  }
+  const prev=s.status;
+  s.status=status;
+  const now3=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  s.modifiedBy=_currentUser||'—';s.modifiedAt=now3;
+  logAudit('Modified','Selection',id,`${s.candidateName} [${s.client}] — status: ${prev}→${status}`);
+  syncCandFromSel(s.candidateName,status,prev);
+  renderSelections();renderCandidates();renderPipeline();updateCounts();scheduleSave();
+  showMsg(`✓ ${s.candidateName||'Candidate'} → "${status}"`);
+}
+// Sync candidate pipeline stage when selection status changes
+function syncCandFromSel(candName,newStatus,prevStatus){
+  if(newStatus===prevStatus)return;
+  const cand=candidates.find(c=>c.name===candName);
+  if(!cand)return;
+  if(newStatus==='Offer Dropped'){
+    cand.stage='Rejected';
+    // Reopen job if it was auto-closed and now has fewer hires than positions
+    const job=jobs.find(j=>j.id===cand.jobId);
+    if(job&&job.status==='Closed'){
+      const activeHires=candidates.filter(c=>c.jobId===job.id&&c.stage==='Hired').length;
+      const positions=job.positions||1;
+      if(activeHires<positions){
+        job.status='Open';
+        showMsg(`ℹ "${job.title}" reopened — ${positions-activeHires} position(s) now available.`);
+        renderJobs();
+      }
+    }
+  } else if(newStatus==='Joined'&&cand.stage!=='Hired'){
+    // Ensure joined candidate shows as Hired
+    cand.stage='Hired';
+  } else if(prevStatus==='Offer Dropped'&&['Final Select','Offer Yet to Be Released','Offer Released'].includes(newStatus)){
+    // Reinstating — move back to Hired
+    cand.stage='Hired';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BULK UPLOAD CANDIDATES
+// ═══════════════════════════════════════════════════════════
+function openBulkModal(){
+  resetBulkModal();
+  openModal('bulk-modal');
+}
+function resetBulkModal(){
+  _bulkRows=[];
+  document.getElementById('bulk-step-1').style.display='block';
+  document.getElementById('bulk-step-2').style.display='none';
+  document.getElementById('bulk-import-btn').style.display='none';
+  const fi=document.getElementById('bulk-file-input');if(fi)fi.value='';
+}
+function findCol(headers,...keys){for(const k of keys){const i=headers.indexOf(k);if(i>=0)return i;}return -1;}
+function parseBulkFile(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const isCsv=file.name.toLowerCase().endsWith('.csv');
+      const wb=isCsv?XLSX.read(e.target.result,{type:'string'}):XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      processBulkRows(rows);
+    }catch(err){showErr('Could not read file: '+err.message);}
+  };
+  if(file.name.toLowerCase().endsWith('.csv'))reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+function processBulkRows(rows){
+  if(!rows||rows.length<2){showErr('File is empty or has no data rows.');return;}
+  const hdrs=rows[0].map(h=>String(h).toLowerCase().trim());
+  const nameCol =findCol(hdrs,'name','full name','candidate name','candidate');
+  const emailCol=findCol(hdrs,'email','email address','e-mail','mail');
+  const jobCol  =findCol(hdrs,'job title','job','role','position','applied for','designation');
+  const phoneCol=findCol(hdrs,'phone','mobile','contact','phone number','mobile number');
+  const stageCol=findCol(hdrs,'stage','status','current stage');
+  const liCol   =findCol(hdrs,'linkedin','linkedin url','linkedin profile');
+  const noteCol =findCol(hdrs,'notes','comments','remarks','note');
+  if(nameCol===-1||emailCol===-1){showErr('File must have "Name" and "Email" column headers in the first row.');return;}
+  const VALID_STAGES=['Applied','Screening','Interview','Offer','Hired','Rejected','On Hold'];
+  const errors=[];_bulkRows=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];
+    const name=String(row[nameCol]||'').trim();
+    const email=String(row[emailCol]||'').trim();
+    if(!name&&!email)continue;
+    if(!name){errors.push(`Row ${i+1}: Missing Name`);continue;}
+    if(!email){errors.push(`Row ${i+1}: Missing Email for "${name}"`);continue;}
+    const jobTitle=jobCol>=0?String(row[jobCol]||'').trim():'';
+    const job=jobTitle?jobs.find(j=>j.title.toLowerCase()===jobTitle.toLowerCase()&&j.status!=='Closed'):null;
+    if(jobTitle&&!job){errors.push(`Row ${i+1}: Job "${jobTitle}" not found or is Closed — row will be imported without a job`);}
+    const rawStage=stageCol>=0?String(row[stageCol]||'').trim():'Applied';
+    const stage=VALID_STAGES.includes(rawStage)?rawStage:'Applied';
+    // Flag duplicates at parse time so user sees them in preview
+    const dupMatch=candidates.find(c=>
+      c.name.trim().toLowerCase()===name.toLowerCase()||
+      c.email.trim().toLowerCase()===email.toLowerCase()
+    );
+    const dupeReason=dupMatch
+      ?(dupMatch.name.toLowerCase()===name.toLowerCase()?`Name matches "${dupMatch.name}"`:`Email matches "${dupMatch.email}"`)
+      :null;
+    _bulkRows.push({name,email,phone:phoneCol>=0?String(row[phoneCol]||'').trim():'',linkedin:liCol>=0?String(row[liCol]||'').trim():'',notes:noteCol>=0?String(row[noteCol]||'').trim():'',jobId:job?.id||0,jobTitle:job?job.title:(jobTitle||'—'),stage,isDupe:!!dupMatch,dupeReason});
+  }
+  const toImport=_bulkRows.filter(r=>!r.isDupe).length;
+  const dupeCount=_bulkRows.filter(r=>r.isDupe).length;
+  // Show preview
+  document.getElementById('bulk-step-1').style.display='none';
+  document.getElementById('bulk-step-2').style.display='block';
+  document.getElementById('bulk-import-btn').style.display=toImport>0?'':'none';
+  document.getElementById('bulk-import-btn').textContent=`✅ Import ${toImport} New Candidate${toImport!==1?'s':''}`;
+  // Stats bar — green if no dupes, amber if there are dupes
+  const statsColor=dupeCount?'#FEF3C7':'#D1FAE5';
+  const statsBorder=dupeCount?'#FCD34D':'#6EE7B7';
+  document.getElementById('bulk-preview-stats').style.background=statsColor;
+  document.getElementById('bulk-preview-stats').style.borderColor=statsBorder;
+  document.getElementById('bulk-preview-stats').innerHTML=
+    `<strong>${toImport}</strong> new · `+
+    (dupeCount?`<strong style="color:#B45309">${dupeCount} duplicate${dupeCount!==1?'s':''}</strong> (highlighted below — will be skipped) · `:'')  +
+    `<strong>${_bulkRows.length}</strong> total rows`;
+  document.getElementById('bulk-preview-errors').innerHTML=errors.length
+    ?`<div style="padding:10px 14px;background:#FEF3C7;border-radius:8px;border:1px solid #FCD34D;font-size:11px;color:#92400E;line-height:1.9;margin-bottom:8px">${errors.map(e=>`⚠ ${e}`).join('<br>')}</div>`:'';
+  document.getElementById('bulk-preview-table').innerHTML=_bulkRows.length
+    ?`<div class="table-wrap"><table>
+      <thead><tr><th>Status</th><th>Name</th><th>Email</th><th>Phone</th><th>Job</th><th>Stage</th></tr></thead>
+      <tbody>${_bulkRows.map(r=>{
+        const rowStyle=r.isDupe?'background:#FEF2F2;':'';
+        return`<tr style="${rowStyle}">
+          <td>${r.isDupe
+            ?`<span style="font-size:10px;font-weight:700;color:var(--danger);background:#FEE2E2;padding:2px 7px;border-radius:20px;white-space:nowrap">⚠ Duplicate<br><span style="font-weight:400;color:#9CA3AF">${r.dupeReason}</span></span>`
+            :`<span style="font-size:10px;font-weight:700;color:#059669;background:#D1FAE5;padding:2px 7px;border-radius:20px">✓ New</span>`}
+          </td>
+          <td><div class="td-name" style="${r.isDupe?'color:var(--gray-400);':''}">${r.name}</div></td>
+          <td style="font-size:12px;color:var(--gray-400)">${r.email}</td>
+          <td style="font-size:12px;color:var(--gray-400)">${r.phone||'—'}</td>
+          <td><span class="tag" style="${r.isDupe?'opacity:.5':''}">${r.jobTitle}</span></td>
+          <td><span class="badge b-${stageC(r.stage)}" style="${r.isDupe?'opacity:.5':''}">${r.stage}</span></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`
+    :'<div class="empty-state">No valid rows found</div>';
+}
+function importBulkCandidates(){
+  const toImport=_bulkRows.filter(r=>!r.isDupe);
+  if(!toImport.length){showErr('No new candidates to import — all rows are duplicates.');return;}
+  for(const r of toImport){
+    const bNow=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    candidates.push({id:nextCId++,name:r.name,email:r.email,phone:r.phone,linkedin:r.linkedin,jobId:r.jobId,stage:r.stage,appliedDate:today(),notes:r.notes,createdBy:_currentUser||'Bulk Import',createdAt:bNow,modifiedBy:'',modifiedAt:''});
+  }
+  const dupes=_bulkRows.filter(r=>r.isDupe).length;
+  resetBulkModal();closeModal('bulk-modal');
+  renderCandidates();updateCounts();scheduleSave();
+  showMsg(`✓ ${toImport.length} candidate(s) imported${dupes?' · '+dupes+' duplicate(s) skipped':''}`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════
+const _charts={};
+function killC(k){if(_charts[k]){_charts[k].destroy();delete _charts[k];}}
+function renderAnalytics(){
+  const hired=candidates.filter(c=>c.stage==='Hired').length,total=candidates.length;
+  const offers=candidates.filter(c=>['Offer','Hired'].includes(c.stage)).length;
+  const allFb=intSchedule.flatMap(i=>i.feedback);
+  const avg=allFb.length?(allFb.reduce((s,f)=>s+f.rating,0)/allFb.length).toFixed(1):'—';
+  const joined=selections.filter(s=>s.status==='Joined').length;
+  document.getElementById('analytics-kpis').innerHTML=`
+    <div class="stat-card sc-green"><div class="sc-label">Hired</div><div class="sc-value">${hired}</div><div class="sc-sub">of ${total} candidates</div></div>
+    <div class="stat-card sc-info"><div class="sc-label">Conversion Rate</div><div class="sc-value">${total?Math.round(hired/total*100):0}%</div><div class="sc-sub">Applied → Hired</div></div>
+    <div class="stat-card sc-amber"><div class="sc-label">Offer Acceptance</div><div class="sc-value">${offers?Math.round(hired/offers*100):0}%</div><div class="sc-sub">${joined} joined from ${selections.length} selections</div></div>
+    <div class="stat-card sc-purple"><div class="sc-label">Avg Interview Score</div><div class="sc-value">${avg}</div><div class="sc-sub">from ${allFb.length} feedback entries</div></div>`;
+
+  if(!window._NO_CHART){
+  killC('funnel');
+  _charts.funnel=new Chart(document.getElementById('chart-funnel'),{type:'bar',data:{labels:['Applied','Screening','Interview','Offer','Hired','On Hold','Rejected'],datasets:[{data:['Applied','Screening','Interview','Offer','Hired','On Hold','Rejected'].map(s=>candidates.filter(c=>c.stage===s).length),backgroundColor:['#3B82F6','#F97316','#8B5CF6','#10B981','#059669','#F59E0B','#EF4444'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  killC('dept');
+  const depts=[...new Set(jobs.map(j=>j.dept))];
+  _charts.dept=new Chart(document.getElementById('chart-dept'),{type:'doughnut',data:{labels:depts,datasets:[{data:depts.map(d=>candidates.filter(c=>jobs.filter(j=>j.dept===d).map(j=>j.id).includes(c.jobId)).length),backgroundColor:['#4F46E5','#0891B2','#D97706','#DC2626','#059669','#7C3AED','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+
+  killC('logstatus');
+  const lsc={};intLog.forEach(l=>{const st=l.l1Status||'Unknown';lsc[st]=(lsc[st]||0)+1;});
+  const lsLabels=Object.keys(lsc),lsData=Object.values(lsc);
+  const lsColors=['#6366F1','#10B981','#EF4444','#F59E0B','#8B5CF6','#0891B2','#14B8A6','#F97316','#EC4899','#84CC16','#6B7280','#3B82F6','#A855F7'];
+  _charts.logstatus=new Chart(document.getElementById('chart-log-status'),{type:'doughnut',data:{labels:lsLabels,datasets:[{data:lsData,backgroundColor:lsColors.slice(0,lsLabels.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:11,font:{size:10}}}}}});
+
+  killC('selout');
+  const ssc={};selections.forEach(s=>{const st=s.status||'Unknown';ssc[st]=(ssc[st]||0)+1;});
+  const ssLabels=Object.keys(ssc);
+  const ssColors={'Final Select':'#10B981','Offer Yet to Be Released':'#F59E0B','Offer Released':'#3B82F6','Joined':'#065F46','Offer Dropped':'#EF4444','On Hold':'#F97316','Waiting for Client Feedback':'#0891B2'};
+  _charts.selout=new Chart(document.getElementById('chart-sel-outcomes'),{type:'doughnut',data:{labels:ssLabels,datasets:[{data:ssLabels.map(l=>ssc[l]),backgroundColor:ssLabels.map(l=>ssColors[l]||'#9CA3AF'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:11,font:{size:10}}}}}});
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+const getJob=id=>jobs.find(j=>j.id===id);
+const getCand=id=>candidates.find(c=>c.id===id);
+const getIS=id=>intSchedule.find(i=>i.id===id);
+const getLog=id=>intLog.find(l=>l.id===id);
+const getSel=id=>selections.find(s=>s.id===id);
+const avColor=name=>{const c=['#4F46E5','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777','#0E7490'];let h=0;for(const x of (name||''))h=x.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length];};
+const initials=name=>(name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
+const fmtDate=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
+const fmtTime=t=>{if(!t||t==='00:00')return'—';const[h,m]=t.split(':').map(Number);const a=h>=12?'PM':'AM';return`${h%12||12}:${String(m).padStart(2,'0')} ${a}`;};
+const today=()=>new Date().toISOString().slice(0,10);
+const gv=id=>document.getElementById(id)?.value||'';
+const fv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v!=null?v:'';};
+const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+const openModal=id=>document.getElementById(id).classList.add('open');
+const closeModal=id=>document.getElementById(id).classList.remove('open');
+const filterCandsByJob=id=>{fv('cand-job-f',id);showPage('candidates');};
+const viewJobPipeline=id=>{document.getElementById('pipeline-job-f').value=id;showPage('pipeline');};
+const stageC=s=>({Applied:'applied',Screening:'screening',Interview:'interview',Offer:'offer',Hired:'hired',Rejected:'rejected','On Hold':'on-hold'})[s]||'applied';
+const statusC=s=>({Open:'open','On Hold':'on-hold',Closed:'closed'})[s]||'open';
+function l1BadgeC(s){const m={'Scheduled':'bl-scheduled','No Show':'bl-no-show','Rescheduled':'bl-rescheduled','L1 Completed – Feedback Pending':'bl-l1-fb','L1 Select':'bl-l1-sel','L1 Reject':'bl-l1-rej','L1 On Hold':'bl-l1-hold','L2 Scheduled':'bl-l2-sched','L2 Completed – Feedback Pending':'bl-l2-fb','L2 Completed – Waiting for Client':'bl-l2-wait','L2 Reject':'bl-l2-rej','L2 On Hold':'bl-l2-hold','Final Select':'bl-final','On Hold':'bl-hold','Waiting for Client Feedback':'bl-wait-client'};return m[s]||'bl-no-show';}
+function selBadgeC(s){const m={'Final Select':'bs-final','Offer Yet to Be Released':'bs-offer-yet','Offer Released':'bs-offer-rel','Joined':'bs-joined','Offer Dropped':'bs-offer-drop','On Hold':'bs-hold','Waiting for Client Feedback':'bs-wait'};return m[s]||'bl-no-show';}
+
+let _sbTimer,_errTimer;
+function showSaveBar(saving,error=false){
+  const bar=document.getElementById('save-bar'),sp=document.getElementById('save-spinner'),msg=document.getElementById('save-msg');
+  clearTimeout(_sbTimer);
+  if(saving){bar.classList.remove('error');sp.style.display='';msg.textContent='Saving to Excel…';bar.classList.add('show');}
+  else if(error){bar.classList.add('error');sp.style.display='none';msg.textContent='Save failed!';bar.classList.add('show');_sbTimer=setTimeout(()=>bar.classList.remove('show'),4000);}
+  else{sp.style.display='none';msg.textContent='✓ Saved';_sbTimer=setTimeout(()=>bar.classList.remove('show'),2000);}
+}
+function showErr(msg){const t=document.getElementById('err-toast');t.textContent='⚠ '+msg;t.style.background='';t.classList.add('show');clearTimeout(_errTimer);_errTimer=setTimeout(()=>t.classList.remove('show'),5000);}
+function showMsg(msg){const t=document.getElementById('err-toast');t.textContent=msg;t.style.background='#059669';t.classList.add('show');clearTimeout(_errTimer);_errTimer=setTimeout(()=>{t.classList.remove('show');t.style.background='';},3000);}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
+
+// ─── Offline bundler ───
+async function downloadBundled(){
+  const btn=document.getElementById('offline-btn');
+  const prog=document.getElementById('offline-progress');
+  btn.disabled=true;btn.textContent='⏳ Bundling…';
+  prog.style.display='';
+
+  const XLSX_URL ='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  const CHART_URL='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+
+  try{
+    prog.textContent='Downloading SheetJS…';
+    const xlsxJs=await fetch(XLSX_URL).then(r=>{if(!r.ok)throw new Error('Failed to fetch SheetJS');return r.text();});
+    prog.textContent='Downloading Chart.js…';
+    const chartJs=await fetch(CHART_URL).then(r=>{if(!r.ok)throw new Error('Failed to fetch Chart.js');return r.text();});
+
+    prog.textContent='Bundling…';
+    // Use the captured static source (before dynamic rendering)
+    let src=window._PAGE_SRC||document.documentElement.outerHTML;
+
+    // Replace CDN script tags with inline versions
+    const inlineTag=(url,js,label)=>{
+      const re=new RegExp('<script\\s+src="'+url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'"\\s*>\\s*<\\/script>','g');
+      const result=src.replace(re,`<script>/* ${label} — bundled */\n${js}\n<\/script>`);
+      if(result===src){
+        // fallback if regex didn't match
+        src=src.replace(`<script src="${url}">`,`<script>/* ${label} — bundled */\n${js}\n`)
+               .replace(`<script src="${url}"><\/script>`,`<script>/* ${label} — bundled */\n${js}\n<\/script>`);
+      }
+      return result;
+    };
+    src=inlineTag(XLSX_URL,xlsxJs,'SheetJS');
+    src=inlineTag(CHART_URL,chartJs,'Chart.js');
+
+    // Remove the CDN failure guard (no longer needed)
+    src=src.replace(/<!-- CDN failure guard[\s\S]*?<\/script>/m,'<!-- Libraries bundled inline -->');
+
+    prog.textContent='Preparing download…';
+    const blob=new Blob([src],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='hr-recruitment-portal-bundled.html';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+
+    btn.textContent='✅ Downloaded!';btn.style.background='#D1FAE5';
+    prog.textContent='Check your Downloads folder. Upload that file to OneDrive.';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='📦 Offline Version';btn.style.background='#F0FDF4';prog.style.display='none';},6000);
+  }catch(e){
+    btn.textContent='📦 Offline Version';btn.disabled=false;
+    prog.textContent='❌ '+e.message+' — check internet connection.';
+    setTimeout(()=>{prog.style.display='none';},5000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════
+function renderAuditLog(){
+  const ef=gv('al-entity-f'),af=gv('al-action-f'),uf=gv('al-user-f');
+  // Populate user filter dynamically
+  const curUser=document.getElementById('al-user-f').value;
+  const allUsers=[...new Set(auditLog.map(a=>a.user).filter(Boolean))].sort();
+  document.getElementById('al-user-f').innerHTML='<option value="">All Users</option>'+allUsers.map(u=>`<option value="${u}"${u===curUser?' selected':''}>${u}</option>`).join('');
+  // Filter and render (newest first)
+  const rows=[...auditLog].reverse().filter(a=>
+    (!ef||a.entity===ef)&&(!af||a.action===af)&&(!uf||a.user===uf)
+  );
+  const actionStyle={Created:'background:#D1FAE5;color:#065F46',Modified:'background:#DBEAFE;color:#1E40AF',Deleted:'background:#FEE2E2;color:#991B1B'};
+  document.getElementById('audit-tbody').innerHTML=rows.length
+    ?rows.map(a=>`<tr>
+      <td style="font-size:11px;color:var(--gray-400);white-space:nowrap">${a.timestamp}</td>
+      <td><strong style="font-size:12px">${a.user}</strong></td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;${actionStyle[a.action]||''}">${a.action}</span></td>
+      <td style="font-size:12px;color:var(--gray-600)">${a.entity}</td>
+      <td style="font-size:11px;color:var(--gray-400);text-align:center">${a.recordId}</td>
+      <td style="font-size:12px;color:var(--gray-700)">${a.summary}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="6" class="empty-state">No audit entries found</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// USER AUTH — username + password login
+// ═══════════════════════════════════════════════════════════
+function _hashPwd(pwd){
+  // Pure-JS hash — works on file://, OneDrive, SharePoint, all browsers
+  const s='HR_PORTAL_SALT::'+pwd+'::2024';
+  let a=0x52bf34d1,b=0xa3c7e291;
+  for(let i=0;i<s.length;i++){
+    const c=s.charCodeAt(i);
+    a=Math.imul(a^c,0x9e3779b9)>>>0;
+    b=Math.imul(b^c,0x85ebca77)>>>0;
+    a=(a^(b>>>13))>>>0; b=(b^(a<<7))>>>0;
+  }
+  // 64 mixing rounds
+  for(let r=0;r<64;r++){a=(Math.imul(a^b,0x6b3a4d29))>>>0;b=(Math.imul(b^a,0x7f4a7c15))>>>0;}
+  return a.toString(16).padStart(8,'0')+b.toString(16).padStart(8,'0');
+}
+const AUTH_VER='v2'; // pure-JS 16-char hash; bump this string to force a clean reset on next load
+function _loadUsers(){
+  if(window._SANDBOX_MODE){users=[];return;}          // no storage in sandboxed iframe
+  try{users=JSON.parse(localStorage.getItem('hrp_users')||'[]');}catch(e){users=[];return;}
+  // Clear stale data whenever: (a) auth version mismatch, or (b) any stored hash isn't 16 hex chars
+  const badHash=users.length&&users[0].pwdHash&&!/^[0-9a-f]{16}$/.test(users[0].pwdHash);
+  try{
+    if(localStorage.getItem('hrp_auth_ver')!==AUTH_VER||badHash){
+      users=[];localStorage.removeItem('hrp_users');
+      localStorage.setItem('hrp_auth_ver',AUTH_VER);
+    }
+  }catch(e){users=[];}
+}
+function resetAuth(){
+  // Avoid relying on confirm() which may be blocked on some platforms
+  const link=document.getElementById('login-reset-link');
+  if(link&&link.dataset.confirm==='1'){
+    // Second click — do the reset
+    try{localStorage.removeItem('hrp_users');localStorage.removeItem('hrp_auth_ver');}catch(e){}
+    users=[];
+    const errEl=document.getElementById('login-error');
+    if(errEl){errEl.style.color='#059669';errEl.textContent='✓ Reset done. Log in with admin / Admin@123';}
+    if(link){link.textContent="Can't log in? Reset credentials";link.dataset.confirm='';}
+    // Re-run init so users array is rebuilt immediately (no page reload needed)
+    try{_loadUsers();}catch(e){}
+    const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    users=[{username:'admin',pwdHash:_hashPwd('Admin@123'),role:'admin',createdAt:now}];
+    try{_saveUsers();}catch(e){}
+    setTimeout(()=>{if(errEl){errEl.textContent='';errEl.style.color='#DC2626';}},4000);
+  } else {
+    // First click — ask for confirmation without alert/confirm
+    if(link){link.dataset.confirm='1';link.textContent='⚠ Click again to confirm reset';link.style.color='#B45309';}
+    setTimeout(()=>{if(link){link.dataset.confirm='';link.textContent="Can't log in? Reset credentials";link.style.color='';}},5000);
+  }
+}
+function _saveUsers(){try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}}
+async function _ensureDefaultAdmin(){
+  if(!users.length){
+    const h=_hashPwd('Admin@123');
+    const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    users=[{username:'admin',pwdHash:h,role:'admin',createdAt:now}];
+    _saveUsers();
+  }
+}
+async function doLogin(){
+  const errEl=document.getElementById('login-error');
+  try{
+    const uname=(document.getElementById('login-uname').value||'').trim();
+    const pwd=document.getElementById('login-pwd').value||'';
+    if(!uname||!pwd){errEl.textContent='Please enter both username and password.';return;}
+    const h=_hashPwd(pwd);
+    const adminHash=_hashPwd('Admin@123');
+
+    // ── Hardcoded admin bypass ──────────────────────────────────────────────
+    // If the user logs in as admin/Admin@123, always succeed and auto-repair
+    // any stale localStorage state. This works even if localStorage is broken.
+    if(uname.toLowerCase()==='admin' && h===adminHash){
+      try{
+        localStorage.removeItem('hrp_users');
+        localStorage.setItem('hrp_auth_ver',AUTH_VER);
+      }catch(e){}
+      const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      users=[{username:'admin',pwdHash:adminHash,role:'admin',createdAt:now}];
+      try{_saveUsers();}catch(e){}
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    const user=users.find(u=>u.username.toLowerCase()===uname.toLowerCase()&&u.pwdHash===h);
+    if(user){
+      _loggedInUser=user;_currentUser=user.username;
+      document.getElementById('login-gate').style.display='none';
+      document.getElementById('sb-user-name').textContent=user.username;
+      document.getElementById('sb-user-role').textContent=user.role==='admin'?'👑 Admin':'👤 User';
+      document.getElementById('sb-manage-btn').style.display=user.role==='admin'?'':'none';
+      document.getElementById('login-uname').value='';
+      document.getElementById('login-pwd').value='';
+      errEl.textContent='';
+    }else{
+      errEl.textContent='Invalid username or password.';
+      document.getElementById('login-pwd').select();
+      setTimeout(()=>{errEl.textContent='';},3500);
+    }
+  }catch(err){
+    errEl.textContent='Error: '+err.message+' — try Reset credentials below.';
+  }
+}
+function doLogout(){
+  _loggedInUser=null;_currentUser='';
+  document.getElementById('login-gate').style.display='flex';
+  document.getElementById('sb-user-name').textContent='—';
+  document.getElementById('sb-user-role').textContent='';
+  document.getElementById('sb-manage-btn').style.display='none';
+}
+// ── User Management (admin) ──
+function openUsersModal(){
+  renderUsersList();
+  fv('nu-uname','');fv('nu-pwd','');fv('nu-role','user');
+  openModal('users-modal');
+}
+function renderUsersList(){
+  document.getElementById('users-list').innerHTML=users.length
+    ?`<div class="table-wrap"><table>
+      <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>${users.map(u=>`<tr>
+        <td><strong>${u.username}</strong></td>
+        <td><span class="badge ${u.role==='admin'?'bs-final':'bl-scheduled'}" style="font-size:11px">${u.role==='admin'?'👑 Admin':'👤 User'}</span></td>
+        <td style="font-size:12px;color:var(--gray-400)">${u.createdAt||'—'}</td>
+        <td><div class="actions-cell">
+          <button class="btn btn-sm btn-secondary" onclick="openChgPwdModal('${u.username}')">🔑 Reset Pwd</button>
+          ${u.username!==(_loggedInUser?.username||'')?`<button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:none" onclick="deleteUser('${u.username}')">🗑</button>`:'<span style="font-size:11px;color:var(--gray-400)">(you)</span>'}
+        </div></td></tr>`).join('')}</tbody></table></div>`
+    :'<div class="empty-state">No users found</div>';
+}
+async function addNewUser(){
+  const uname=gv('nu-uname').trim(),pwd=gv('nu-pwd').trim(),role=gv('nu-role');
+  if(!uname||!pwd){showErr('Username and password are required.');return;}
+  if(pwd.length<6){showErr('Password must be at least 6 characters.');return;}
+  if(users.find(u=>u.username.toLowerCase()===uname.toLowerCase())){showErr(`Username "${uname}" already exists.`);return;}
+  const h=_hashPwd(pwd);
+  const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  users.push({username:uname,pwdHash:h,role,createdAt:now});
+  _saveUsers();renderUsersList();
+  fv('nu-uname','');fv('nu-pwd','');fv('nu-role','user');
+  showMsg(`✓ User "${uname}" created`);
+}
+function deleteUser(uname){
+  if(!confirm(`Delete user "${uname}"? This cannot be undone.`))return;
+  users=users.filter(u=>u.username!==uname);
+  _saveUsers();renderUsersList();
+  showMsg(`✓ User "${uname}" deleted`);
+}
+function openChgPwdModal(uname){
+  _chgPwdTarget=uname||_loggedInUser?.username||null;
+  sv('chgpwd-title',uname&&uname!==_loggedInUser?.username?`🔑 Reset Password — ${uname}`:'🔑 Change My Password');
+  fv('chg-pwd1','');fv('chg-pwd2','');
+  openModal('chgpwd-modal');
+}
+async function saveNewPassword(){
+  const p1=gv('chg-pwd1').trim(),p2=gv('chg-pwd2').trim();
+  if(!p1){showErr('Please enter a new password.');return;}
+  if(p1.length<6){showErr('Password must be at least 6 characters.');return;}
+  if(p1!==p2){showErr('Passwords do not match.');return;}
+  const user=users.find(u=>u.username===_chgPwdTarget);
+  if(!user){showErr('User not found.');return;}
+  user.pwdHash=_hashPwd(p1);
+  _saveUsers();closeModal('chgpwd-modal');
+  showMsg(`✓ Password updated for "${_chgPwdTarget}"`);
+}
+// ── Immediate wiring: script is in <body> so login gate elements are already in DOM ──
+// This fires as soon as the script tag is parsed, before DOMContentLoaded.
+(function wireLoginNow(){
+  const btn=document.getElementById('login-btn');
+  const uname=document.getElementById('login-uname');
+  const pwd=document.getElementById('login-pwd');
+  const reset=document.getElementById('login-reset-link');
+  if(btn)btn.addEventListener('click',doLogin);
+  if(uname)uname.addEventListener('keydown',e=>{if(e.key==='Enter')pwd&&pwd.focus();});
+  if(pwd)pwd.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  if(reset)reset.addEventListener('click',e=>{e.preventDefault();resetAuth();});
+})();
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  window._PAGE_SRC=document.documentElement.outerHTML;
+
+  // ── Wire up login gate via addEventListener (belt-and-suspenders, CSP-safe) ──
+  const loginBtn=document.getElementById('login-btn');
+  const loginUname=document.getElementById('login-uname');
+  const loginPwd=document.getElementById('login-pwd');
+  const resetLink=document.getElementById('login-reset-link');
+  if(loginBtn&&!loginBtn._wired){loginBtn.addEventListener('click',doLogin);loginBtn._wired=true;}
+  if(loginUname&&!loginUname._wired){loginUname.addEventListener('keydown',e=>{if(e.key==='Enter')loginPwd&&loginPwd.focus();});loginUname._wired=true;}
+  if(loginPwd&&!loginPwd._wired){loginPwd.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});loginPwd._wired=true;}
+  if(resetLink&&!resetLink._wired){resetLink.addEventListener('click',e=>{e.preventDefault();resetAuth();});resetLink._wired=true;}
+
+  document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{
+    if(e.target===o){
+      if(o.id==='sel-modal')cancelSelModal();
+      else o.classList.remove('open');
+    }
+  }));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      if(document.getElementById('sel-modal').classList.contains('open'))cancelSelModal();
+      else document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+    }
+  });
+  _loadUsers();
+  await _ensureDefaultAdmin();
+  tryAutoLoad();
+});
+</script>
+
+<!-- User Management Modal (admin only) -->
+<div class="modal-overlay" id="users-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h2>👥 Manage Users</h2><button class="modal-close" onclick="closeModal('users-modal')">✕</button></div>
+    <div class="modal-body">
+      <div id="users-list"></div>
+      <div style="border-top:1px solid var(--gray-200);margin-top:18px;padding-top:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--gray-700)">➕ Add New User</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Username *</label><input id="nu-uname" placeholder="e.g. rahul.kumar" autocomplete="off"></div>
+          <div class="form-group"><label>Password *</label><input type="password" id="nu-pwd" placeholder="Min 6 characters" autocomplete="new-password"></div>
+          <div class="form-group"><label>Role *</label>
+            <select id="nu-role"><option value="user">User</option><option value="admin">Admin</option></select>
+          </div>
+          <div class="form-group" style="align-self:flex-end">
+            <button class="btn btn-primary" onclick="addNewUser()">+ Add User</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('users-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Change / Reset Password Modal -->
+<div class="modal-overlay" id="chgpwd-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><h2 id="chgpwd-title">🔑 Change Password</h2><button class="modal-close" onclick="closeModal('chgpwd-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>New Password *</label><input type="password" id="chg-pwd1" placeholder="Min 6 characters" autocomplete="new-password"></div>
+      <div class="form-group"><label>Confirm Password *</label><input type="password" id="chg-pwd2" placeholder="Repeat new password" autocomplete="new-password"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('chgpwd-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewPassword()">💾 Save Password</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -260,8 +260,7 @@ window.addEventListener('load', function(){
     </div>
     <div id="login-error" style="color:#DC2626;font-size:12px;margin-bottom:10px;min-height:16px;text-align:center"></div>
     <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
-    <div style="margin-top:14px;font-size:11px;color:#9CA3AF;text-align:center">Default: admin / Admin@123 — change after first login</div>
-    <div style="margin-top:10px;text-align:center"><a href="#" id="login-reset-link" style="font-size:11px;color:#9CA3AF;text-decoration:underline;cursor:pointer">Can't log in? Reset credentials</a></div>
+    <a href="#" id="login-reset-link" style="display:none"></a>
   </div>
 </div>
 
@@ -2164,6 +2163,7 @@ async function doLogin(){
     const user=users.find(u=>u.username.toLowerCase()===uname.toLowerCase()&&u.pwdHash===h);
     if(user){
       _loggedInUser=user;_currentUser=user.username;
+      try{if(!window._SANDBOX_MODE)localStorage.setItem('hrp_session',JSON.stringify({username:user.username,role:user.role}));}catch(e){}
       document.getElementById('login-gate').style.display='none';
       document.getElementById('sb-user-name').textContent=user.username;
       document.getElementById('sb-user-role').textContent=user.role==='admin'?'👑 Admin':'👤 User';
@@ -2179,11 +2179,12 @@ async function doLogin(){
       setTimeout(()=>{errEl.textContent='';},3500);
     }
   }catch(err){
-    errEl.textContent='Error: '+err.message+' — try Reset credentials below.';
+    errEl.textContent='Error: '+err.message;
   }
 }
 function doLogout(){
   _loggedInUser=null;_currentUser='';
+  try{localStorage.removeItem('hrp_session');}catch(e){}
   document.getElementById('login-gate').style.display='flex';
   document.getElementById('sb-user-name').textContent='—';
   document.getElementById('sb-user-role').textContent='';
@@ -2284,6 +2285,25 @@ window.addEventListener('DOMContentLoaded',async()=>{
   });
   _loadUsers();
   await _ensureDefaultAdmin();
+  // ── Auto-restore session across page refreshes ──
+  if(!window._SANDBOX_MODE){
+    try{
+      const sess=JSON.parse(localStorage.getItem('hrp_session')||'null');
+      if(sess&&sess.username){
+        const user=users.find(u=>u.username.toLowerCase()===sess.username.toLowerCase());
+        if(user){
+          _loggedInUser=user;_currentUser=user.username;
+          document.getElementById('login-gate').style.display='none';
+          document.getElementById('sb-user-name').textContent=user.username;
+          document.getElementById('sb-user-role').textContent=user.role==='admin'?'👑 Admin':'👤 User';
+          document.getElementById('sb-manage-btn').style.display=user.role==='admin'?'':'none';
+          loadFromGitHub();
+        }else{
+          localStorage.removeItem('hrp_session');
+        }
+      }
+    }catch(e){}
+  }
 });
 </script>
 

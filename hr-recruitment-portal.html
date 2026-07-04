@@ -266,37 +266,21 @@ window.addEventListener('load', function(){
 </div>
 
 
-<!-- FILE PICKER -->
+<!-- LOADING SCREEN (auto-loads data from GitHub) -->
 <div id="picker-screen">
-  <div class="picker-card">
+  <div class="picker-card" style="max-width:420px">
     <div class="picker-top">
       <div class="picker-logo">👥</div>
       <h1>HR Recruitment Portal</h1>
-      <p>All your data lives in an Excel file on your computer.<br>No cloud account or upload required.</p>
+      <p id="gh-load-title">Fetching latest data…</p>
     </div>
-    <div class="picker-body">
-      <button class="picker-btn" id="btn-reconnect" style="display:none;border-color:#059669" onclick="reconnectLastFile()">
-        <div class="picker-btn-icon" style="background:#DCFCE7">⚡</div>
-        <div><strong id="btn-reconnect-label" style="color:#065F46">Reconnect to last file</strong><span id="btn-reconnect-sub">Click to re-open your previous Excel file</span></div>
-      </button>
-      <button class="picker-btn" onclick="openExcelFile()">
-        <div class="picker-btn-icon" style="background:#EFF6FF">📂</div>
-        <div><strong>Open existing Excel file</strong><span>Load your HR-Recruitment-Data.xlsx</span></div>
-      </button>
-      <div class="picker-divider">or</div>
-      <button class="picker-btn" onclick="createNewFile()">
-        <div class="picker-btn-icon" style="background:#ECFDF5">✨</div>
-        <div><strong>Create a new Excel file</strong><span>Start fresh with an empty portal</span></div>
-      </button>
-      <input type="file" id="file-input-hidden" accept=".xlsx" onchange="loadFromInput(this)">
-    </div>
-    <div class="picker-footer">Works with OneDrive · Dropbox · Google Drive · Local folders<br>
-      <span style="color:#059669;font-weight:600">✓ Chrome/Edge</span> &nbsp;
-      <span style="color:#059669;font-weight:600">✓ Safari 15+</span> &nbsp;
-      <span style="color:#F59E0B;font-weight:600">Firefox: upload/download mode</span>
+    <div class="picker-body" style="text-align:center;padding:36px 24px">
+      <div id="gh-load-spinner" style="font-size:44px;margin-bottom:16px;animation:spin 1.5s linear infinite;display:inline-block">⏳</div>
+      <div id="gh-load-msg" style="color:#6B7280;font-size:14px;line-height:1.6">Connecting to GitHub…</div>
     </div>
   </div>
 </div>
+<style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
 
 <!-- SAVE BAR -->
 <div class="save-bar" id="save-bar"><div class="save-spinner" id="save-spinner"></div><span id="save-msg">Saving…</span></div>
@@ -346,11 +330,11 @@ window.addEventListener('load', function(){
     </a>
   </nav>
   <div class="sb-file">
-    <div class="sf-lbl">Excel File</div>
-    <div class="sf-name" id="excel-filename">—</div>
+    <div class="sf-lbl">Data Source</div>
+    <div class="sf-name" id="excel-filename" title="HR-Recruitment-Data.xlsx on GitHub">GitHub</div>
     <div class="sf-btns">
-      <button class="sf-btn" onclick="reloadFromFile()">↻ Reload</button>
-      <button class="sf-btn" onclick="switchFile()">⇄ Switch</button>
+      <button class="sf-btn" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload</button>
+      <button class="sf-btn" onclick="doSave()" title="Download Excel to your computer" style="color:#059669;font-weight:600">⬇ Download</button>
     </div>
   </div>
   <div class="sb-file" style="border-top:1px solid var(--gray-200);padding-top:10px;margin-top:2px">
@@ -885,51 +869,62 @@ function buildWB(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([AUDIT_HDR,...auditLog.map(auditToRow)]),'AuditLog');
   return wb;
 }
+// ── GitHub data source ──────────────────────────────────────
+const GITHUB_DATA_URL='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/HR-Recruitment-Data.xlsx';
+
+async function loadFromGitHub(){
+  // Show loading screen
+  const ps=document.getElementById('picker-screen');
+  ps.classList.remove('hidden');
+  const spinner=document.getElementById('gh-load-spinner');
+  const msg=document.getElementById('gh-load-msg');
+  const title=document.getElementById('gh-load-title');
+  spinner.textContent='⏳';spinner.style.animation='spin 1.5s linear infinite';
+  msg.textContent='Fetching HR-Recruitment-Data.xlsx from GitHub…';
+  title.textContent='Loading latest data…';
+  try{
+    const resp=await fetch(GITHUB_DATA_URL+'?_='+Date.now());
+    if(!resp.ok)throw new Error('HTTP '+resp.status+' – file not found on GitHub');
+    const buf=await resp.arrayBuffer();
+    fileName='HR-Recruitment-Data.xlsx';
+    const wb=XLSX.read(buf,{type:'array',cellDates:false});
+    parseWB(wb);
+    // try restore any unsaved local changes
+    _lsLoad();
+    document.getElementById('excel-filename').textContent='GitHub ✓';
+    ps.classList.add('hidden');
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main').style.display='block';
+    updateCounts();showPage('dashboard');
+  }catch(e){
+    spinner.textContent='⚠️';spinner.style.animation='none';
+    title.textContent='Could not load data';
+    msg.innerHTML='<span style="color:#DC2626">'+e.message+'</span><br><br>'
+      +'Starting with an empty portal. Add data and use <strong>⬇ Download</strong> to save your work.';
+    // After 3s, proceed with empty state
+    setTimeout(()=>{
+      jobs=[];candidates=[];intSchedule=[];intLog=[];selections=[];auditLog=[];
+      nextJId=nextCId=nextISId=nextLId=nextSId=nextAuditId=1;
+      fileName='HR-Recruitment-Data.xlsx';
+      ps.classList.add('hidden');
+      document.getElementById('sidebar').style.display='flex';
+      document.getElementById('main').style.display='block';
+      updateCounts();showPage('dashboard');
+    },3000);
+  }
+}
+
 async function loadWB(file){
   const buf=await file.arrayBuffer();
   const wb=XLSX.read(buf,{type:'array',cellDates:false});
   parseWB(wb);
-  document.getElementById('excel-filename').textContent=file.name;
+  document.getElementById('excel-filename').textContent='GitHub ✓';
   document.getElementById('picker-screen').classList.add('hidden');
   document.getElementById('sidebar').style.display='flex';
   document.getElementById('main').style.display='block';
   updateCounts();showPage('dashboard');
 }
-async function openExcelFile(){
-  try{
-    if(HAS_FSA){
-      const[h]=await window.showOpenFilePicker({types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
-      fileHandle=h;fileName=h.name;
-      await _saveHandle(h);
-      await loadWB(await h.getFile());
-    }else{document.getElementById('file-input-hidden').click();}
-  }catch(e){if(e.name!=='AbortError')showErr(e.message);}
-}
-function loadFromInput(inp){const f=inp.files[0];if(!f){return;}fileName=f.name;loadWB(f);}
-async function createNewFile(){
-  jobs=[];candidates=[];intSchedule=[];intLog=[];selections=[];
-  nextJId=nextCId=nextISId=nextLId=nextSId=1;
-  if(HAS_FSA){
-    try{
-      fileHandle=await window.showSaveFilePicker({suggestedName:'HR-Recruitment-Data.xlsx',types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
-      fileName=fileHandle.name;
-      await _saveHandle(fileHandle);
-      await doSave();
-      document.getElementById('sf-name').textContent=fileName;
-      document.getElementById('picker-screen').classList.add('hidden');
-      document.getElementById('sidebar').style.display='flex';
-      document.getElementById('main').style.display='block';
-      updateCounts();showPage('dashboard');
-    }catch(e){if(e.name!=='AbortError')showErr(e.message);}
-  }else{
-    fileName='HR-Recruitment-Data.xlsx';
-    document.getElementById('picker-screen').classList.add('hidden');
-    document.getElementById('sidebar').style.display='flex';
-    document.getElementById('main').style.display='block';
-    updateCounts();showPage('dashboard');
-  }
-}
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(doSave,600);}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);}
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
   const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId};
@@ -958,45 +953,20 @@ function _showSandboxLoginNotice(){
     +'(not the "View" link), or click <strong>⋯ → Download</strong> in SharePoint and open the file locally.';
   card.insertBefore(notice, card.querySelector('div[style*="margin-bottom:26px"]').nextSibling||card.firstChild);
 }
-function _adjustPickerForNoXlsx(){
-  const body=document.querySelector('.picker-body');if(!body)return;
-  let hasData=false;
-  try{hasData=!!localStorage.getItem('hrp_data');}catch(e){}
-  const btn=document.createElement('button');
-  btn.className='picker-btn';btn.style.borderColor='#059669';
-  btn.innerHTML='<div class="picker-btn-icon" style="background:#DCFCE7">💾</div>'
-    +'<div><strong style="color:#065F46">'+(hasData?'Continue from browser storage':'Start fresh (browser storage)')+'</strong>'
-    +'<span>'+(hasData?'Load your previously saved portal data':'Data will be saved in this browser')+'</span></div>';
-  btn.addEventListener('click',function(){
-    _lsLoad();
-    fileName='Browser Storage';
-    document.getElementById('picker-screen').classList.add('hidden');
-    document.getElementById('sidebar').style.display='flex';
-    document.getElementById('main').style.display='block';
-    updateCounts();showPage('dashboard');
-  });
-  body.insertBefore(btn,body.firstChild);
-  // Also add a divider after
-  const div=document.createElement('div');div.className='picker-divider';div.textContent='or use Excel file';
-  body.insertBefore(div,btn.nextSibling);
-}
+function _adjustPickerForNoXlsx(){/* no-op in GitHub Pages mode — loadFromGitHub handles everything */}
 async function doSave(){
-  showSaveBar(true);
+  // Downloads the current data as an Excel file.
+  // After downloading, re-upload to GitHub to share updates with the team.
   try{
-    // Fallback: when XLSX not available, persist to localStorage
-    if(window._NO_XLSX){_lsSave();showSaveBar(false);return;}
+    if(window._NO_XLSX){showErr('Excel download not available in this browser mode.');return;}
     const wb=buildWB();
-    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    if(fileHandle&&HAS_FSA){const w=await fileHandle.createWritable();await w.write(new Blob([out]));await w.close();}
-    else XLSX.writeFile(wb,fileName||'HR-Recruitment-Data.xlsx');
-    showSaveBar(false);
-  }catch(e){showSaveBar(false,true);showErr('Save failed: '+e.message);}
+    XLSX.writeFile(wb,'HR-Recruitment-Data.xlsx');
+    showMsg('✓ Downloaded! Re-upload to GitHub to share with the team.');
+    _lsSave();
+  }catch(e){showErr('Download failed: '+e.message);}
 }
-async function reloadFromFile(){
-  if(fileHandle){await loadWB(await fileHandle.getFile());}
-  else document.getElementById('file-input-hidden').click();
-}
-function switchFile(){document.getElementById('picker-screen').classList.remove('hidden');}
+async function reloadFromFile(){await loadFromGitHub();}
+function switchFile(){/* no-op in GitHub Pages mode */}
 
 // ═══════════════════════════════════════════════════════════
 // INDEXEDDB AUTO-RECONNECT
@@ -1038,7 +1008,7 @@ function showPage(name){
     'int-schedule':'Interview Schedule','int-log':'Interview Log (L1/L2)','selections':'Selections',auditlog:'Audit Log'};
   document.getElementById('page-title').textContent=titles[name]||name;
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="reloadFromFile()">↻ Reload</button>';
+  ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload from GitHub</button>';
   if(name==='jobs')         ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openJobModal()">+ Add Job</button>';
   if(name==='candidates'){ta.innerHTML+='<button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📤 Bulk Upload</button>';ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openCandModal()">+ Add Candidate</button>';}
   if(name==='int-schedule') ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openISModal()">+ Schedule Interview</button>';
@@ -2014,7 +1984,7 @@ let _sbTimer,_errTimer;
 function showSaveBar(saving,error=false){
   const bar=document.getElementById('save-bar'),sp=document.getElementById('save-spinner'),msg=document.getElementById('save-msg');
   clearTimeout(_sbTimer);
-  if(saving){bar.classList.remove('error');sp.style.display='';msg.textContent='Saving to Excel…';bar.classList.add('show');}
+  if(saving){bar.classList.remove('error');sp.style.display='';msg.textContent='Downloading Excel…';bar.classList.add('show');}
   else if(error){bar.classList.add('error');sp.style.display='none';msg.textContent='Save failed!';bar.classList.add('show');_sbTimer=setTimeout(()=>bar.classList.remove('show'),4000);}
   else{sp.style.display='none';msg.textContent='✓ Saved';_sbTimer=setTimeout(()=>bar.classList.remove('show'),2000);}
 }
@@ -2201,6 +2171,8 @@ async function doLogin(){
       document.getElementById('login-uname').value='';
       document.getElementById('login-pwd').value='';
       errEl.textContent='';
+      // Auto-load data from GitHub
+      loadFromGitHub();
     }else{
       errEl.textContent='Invalid username or password.';
       document.getElementById('login-pwd').select();
@@ -2312,7 +2284,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   });
   _loadUsers();
   await _ensureDefaultAdmin();
-  tryAutoLoad();
 });
 </script>
 

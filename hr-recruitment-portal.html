@@ -1065,7 +1065,7 @@ function renderDashboard(){
     <div class="stat-card sc-amber"><div class="sc-label">Final Selected</div><div class="sc-value">${finalSel}</div><div class="sc-sub">${selections.length} in selections · ${offerYet} offer pending</div></div>
     <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release</div></div>
     <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel} offer pending</div></div>
-    <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show</div><div class="sc-value">${l1reject+l2reject}</div><div class="sc-sub">${noShow} no show · ${onHoldLog} on hold</div></div>`;
+    <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show / On Hold</div><div class="sc-value">${l1reject+l2reject+noShow+onHoldLog}</div><div class="sc-sub">${l1reject+l2reject} rejected · ${noShow} no show · ${onHoldLog} on hold</div></div>`;
 
   // ── Candidate Pipeline (all stages) + Interview Log Status (all statuses)
   const cpStages=[
@@ -1930,7 +1930,7 @@ function renderAnalytics(){
   document.getElementById('analytics-kpis').innerHTML=`
     <div class="stat-card sc-green"><div class="sc-label">Hired</div><div class="sc-value">${hired}</div><div class="sc-sub">of ${total} candidates</div></div>
     <div class="stat-card sc-info"><div class="sc-label">Conversion Rate</div><div class="sc-value">${total?Math.round(hired/total*100):0}%</div><div class="sc-sub">Applied → Hired</div></div>
-    <div class="stat-card sc-amber"><div class="sc-label">Offer Acceptance</div><div class="sc-value">${offers?Math.round(hired/offers*100):0}%</div><div class="sc-sub">${joined} joined from ${selections.length} selections</div></div>
+    <div class="stat-card sc-amber"><div class="sc-label">Offer Acceptance</div><div class="sc-value">${selections.length?Math.round(joined/selections.length*100):0}%</div><div class="sc-sub">${joined} joined from ${selections.length} selections</div></div>
     <div class="stat-card sc-purple"><div class="sc-label">Avg Interview Score</div><div class="sc-value">${avg}</div><div class="sc-sub">from ${allFb.length} feedback entries</div></div>`;
 
   if(!window._NO_CHART){

@@ -327,6 +327,11 @@ window.addEventListener('load', function(){
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,9 6,13 14,4"/></svg>Selections
       <span class="nav-cnt" id="cnt-sel">0</span>
     </a>
+    <div class="nav-sec">System</div>
+    <a onclick="showPage('recycle-bin')" id="nav-recycle-bin">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,4 4,4 14,4"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1m2 0l-1 10a2 2 0 01-2 2H6a2 2 0 01-2-2L3 4"/><line x1="7" y1="7" x2="7" y2="11"/><line x1="9" y1="7" x2="9" y2="11"/></svg>Recycle Bin
+      <span class="nav-cnt" id="cnt-deleted">0</span>
+    </a>
   </nav>
   <div class="sb-file">
     <div class="sf-lbl">Data Source</div>
@@ -426,6 +431,7 @@ window.addEventListener('load', function(){
         <option>L2 Scheduled</option><option>L2 Completed – Feedback Pending</option>
         <option>L2 Completed – Waiting for Client</option><option>L2 Reject</option><option>L2 On Hold</option>
         <option>Final Select</option><option>On Hold</option><option>Waiting for Client Feedback</option>
+        <option>HR Select</option><option>HR Reject</option><option>HR On Hold</option>
       </select>
     </div>
     <div class="table-wrap"><table>
@@ -464,6 +470,15 @@ window.addEventListener('load', function(){
     </div>
   
   </div><!-- end page-analytics -->
+
+  <!-- RECYCLE BIN PAGE -->
+  <div class="page" id="page-recycle-bin">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:13px;color:var(--gray-500)">Deleted records are stored here and can be restored at any time.</div>
+      <button class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;border:none;font-weight:700" onclick="clearRecycleBin()">🗑 Empty Recycle Bin</button>
+    </div>
+    <div id="recycle-bin-body"></div>
+  </div>
 
   <!-- AUDIT LOG PAGE -->
   <div id="page-auditlog" class="page">
@@ -558,12 +573,12 @@ window.addEventListener('load', function(){
       <div class="form-group"><label>Job / Role *</label><select id="isf-job"></select></div>
       <div class="form-group"><label>Date *</label><input type="date" id="isf-date"></div>
       <div class="form-group"><label>Time *</label><input type="time" id="isf-time"></div>
-      <div class="form-group"><label>Round / Type</label><select id="isf-type"><option>L1 Round</option><option>L2 Round</option><option>Client Round</option><option>Phone Screen</option><option>Video Call</option><option>Technical</option><option>On-site</option></select></div>
+      <div class="form-group"><label>Round / Type</label><select id="isf-type"><option>L1 Round</option><option>L2 Round</option><option>Client Round</option><option>HR Round</option><option>Phone Screen</option><option>Video Call</option><option>Technical</option><option>On-site</option></select></div>
       <div class="form-group"><label>Status</label><select id="isf-status"><option>Scheduled</option><option>Completed</option><option>Cancelled</option></select></div>
       <div class="form-group full"><label>Interviewers (comma-separated)</label><input id="isf-interviewers" placeholder="Alice Brown, Bob Singh"></div>
       <div class="form-group full"><label>Notes</label><textarea id="isf-notes"></textarea></div>
     </div></div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('int-sched-modal')">Cancel</button><button class="btn btn-primary" onclick="saveIntSched()">Save</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="cancelIntSchedModal()">Cancel</button><button class="btn btn-primary" onclick="saveIntSched()">Save</button></div>
   </div>
 </div>
 
@@ -599,6 +614,7 @@ window.addEventListener('load', function(){
         <div style="display:flex;gap:7px;flex-wrap:wrap">
           <button class="btn btn-sm" style="background:#EDE9FE;color:#5B21B6;border:none" id="btn-sched-l2">📅 Schedule L2 Round</button>
           <button class="btn btn-sm" style="background:#CFFAFE;color:#164E63;border:none" id="btn-sched-client">📅 Schedule Client Round</button>
+          <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;border:none;display:none" id="btn-sched-hr">👔 Schedule HR Round</button>
         </div>
       </div>
     </div>
@@ -720,9 +736,12 @@ window.addEventListener('load', function(){
         <button onclick="pickRound('Client Round')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px;border:2px solid #CFFAFE;background:#F0FDFF;cursor:pointer;text-align:left" onmouseenter="this.style.borderColor='#0891B2'" onmouseleave="this.style.borderColor='#CFFAFE'">
           <div style="font-size:22px">🤝</div><div><div style="font-weight:700;color:#164E63">Client Round</div><div style="font-size:11px;color:var(--gray-500)">Final client / stakeholder interview</div></div>
         </button>
+        <button onclick="pickRound('HR Round')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px;border:2px solid #D1FAE5;background:#F0FDF4;cursor:pointer;text-align:left" onmouseenter="this.style.borderColor='#059669'" onmouseleave="this.style.borderColor='#D1FAE5'">
+          <div style="font-size:22px">👔</div><div><div style="font-weight:700;color:#065F46">HR Round</div><div style="font-size:11px;color:var(--gray-500)">HR / offer & fitment discussion</div></div>
+        </button>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('round-picker-modal')">Cancel</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="cancelRoundPicker()">Cancel</button></div>
   </div>
 </div>
 
@@ -762,6 +781,10 @@ let editJId=null,editCId=null,editISId=null,editLId=null,editSId=null,activeFbId
 let fileHandle=null,fileName='',saveTimer=null,activeIntTab='scheduled';
 // Pending-hire gate: tracks a hire in progress until CTC/DOJ is confirmed
 let _pendingHireCandId=null,_pendingHirePrevStage=null,_pendingHireSelId=null;
+// Soft-delete: deleted records stored for restore
+let deletedRecords=[]; let nextDelId=1; let _pendingDeleteFn=null;
+// Schedule stage-tracking: saves candidate's stage before opening the schedule modal
+let _schedOrigCandId=null,_schedOrigStage=null;
 let _currentUser=''; // set from login
 let _loggedInUser=null; // {username,role}
 let users=[]; // loaded from localStorage
@@ -926,7 +949,7 @@ async function loadWB(file){
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);}
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
-  const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId};
+  const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
   try{localStorage.setItem('hrp_data',JSON.stringify(d));return true;}catch(e){return false;}
 }
 function _lsLoad(){
@@ -937,6 +960,7 @@ function _lsLoad(){
     intLog=d.intLog||[];selections=d.selections||[];auditLog=d.auditLog||[];
     nextJId=d.nextJId||1;nextCId=d.nextCId||1;nextISId=d.nextISId||1;
     nextLId=d.nextLId||1;nextSId=d.nextSId||1;nextAuditId=d.nextAuditId||1;
+    deletedRecords=d.deletedRecords||[];nextDelId=d.nextDelId||1;
     return true;
   }catch(e){return false;}
 }
@@ -1004,7 +1028,7 @@ function showPage(name){
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   const titles={dashboard:'Dashboard',analytics:'Analytics',jobs:'Jobs',candidates:'Candidates',pipeline:'Pipeline',
-    'int-schedule':'Interview Schedule','int-log':'Interview Log (L1/L2)','selections':'Selections',auditlog:'Audit Log'};
+    'int-schedule':'Interview Schedule','int-log':'Interview Log (L1/L2)','selections':'Selections',auditlog:'Audit Log','recycle-bin':'🗑 Recycle Bin'};
   document.getElementById('page-title').textContent=titles[name]||name;
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload from GitHub</button>';
@@ -1021,6 +1045,7 @@ function showPage(name){
   if(name==='int-schedule') renderIntSchedule();
   if(name==='int-log')    renderIntLog();
   if(name==='selections') renderSelections();
+  if(name==='recycle-bin') renderRecycleBin();
 }
 function updateCounts(){
   sv('cnt-jobs',jobs.filter(j=>j.status==='Open').length);
@@ -1028,6 +1053,7 @@ function updateCounts(){
   sv('cnt-int-sched',intSchedule.filter(i=>i.status==='Scheduled').length);
   sv('cnt-int-log',intLog.length);
   sv('cnt-sel',selections.length);
+  sv('cnt-deleted',deletedRecords.length);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1038,17 +1064,25 @@ function renderDashboard(){
   // Candidate stage counts
   const csc=st=>candidates.filter(c=>c.stage===st).length;
   const hired=csc('Hired');
-  // Interview Log: strictly separated counts (fixes L2→L1 mix-up)
-  const l1sel   =intLog.filter(i=>i.l1Status==='L1 Select').length;
-  const l1reject =intLog.filter(i=>i.l1Status==='L1 Reject').length;
-  const l1fb     =intLog.filter(i=>i.l1Status==='L1 Completed – Feedback Pending').length;
-  const l2prog   =intLog.filter(i=>['L2 Scheduled','L2 Completed – Feedback Pending','L2 Completed – Waiting for Client'].includes(i.l1Status)).length;
-  const l2reject =intLog.filter(i=>i.l1Status==='L2 Reject').length;
-  const finalSel =intLog.filter(i=>i.l1Status==='Final Select').length;
-  const noShow   =intLog.filter(i=>['No Show','Rescheduled'].includes(i.l1Status)).length;
-  const onHoldLog=intLog.filter(i=>i.l1Status==='On Hold').length;
-  const schedLog =intLog.filter(i=>i.l1Status==='Scheduled').length;
-  const waitCl   =intLog.filter(i=>i.l1Status==='Waiting for Client Feedback').length;
+  // Interview Log: use latest-per-candidate entry so status changes are reflected correctly
+  // (prevents double-counting when a candidate moves from Final Select → On Hold → Final Select)
+  const _latestByName={};
+  intLog.forEach(l=>{
+    const key=(l.candidateName||'').toLowerCase().trim();
+    if(!key)return;
+    if(!_latestByName[key]||(l.availDate||'')>=(_latestByName[key].availDate||''))_latestByName[key]=l;
+  });
+  const effectiveLog=Object.values(_latestByName);
+  const l1sel   =effectiveLog.filter(i=>i.l1Status==='L1 Select').length;
+  const l1reject =effectiveLog.filter(i=>i.l1Status==='L1 Reject').length;
+  const l1fb     =effectiveLog.filter(i=>i.l1Status==='L1 Completed – Feedback Pending').length;
+  const l2prog   =effectiveLog.filter(i=>['L2 Scheduled','L2 Completed – Feedback Pending','L2 Completed – Waiting for Client'].includes(i.l1Status)).length;
+  const l2reject =effectiveLog.filter(i=>['L2 Reject','HR Reject'].includes(i.l1Status)).length;
+  const finalSel =effectiveLog.filter(i=>['Final Select','HR Select'].includes(i.l1Status)).length;
+  const noShow   =effectiveLog.filter(i=>['No Show','Rescheduled'].includes(i.l1Status)).length;
+  const onHoldLog=effectiveLog.filter(i=>['On Hold','HR On Hold'].includes(i.l1Status)).length;
+  const schedLog =effectiveLog.filter(i=>i.l1Status==='Scheduled').length;
+  const waitCl   =effectiveLog.filter(i=>i.l1Status==='Waiting for Client Feedback').length;
   // Selection counts
   const joined   =selections.filter(s=>s.status==='Joined').length;
   const offerRel =selections.filter(s=>s.status==='Offer Released').length;
@@ -1153,11 +1187,14 @@ function saveJob(){
   closeModal('job-modal');renderJobs();updateCounts();scheduleSave();
 }
 function deleteJob(id){
-  if(!confirm('Delete this job and related candidates/interviews?'))return;
   const j=getJob(id);
-  logAudit('Deleted','Job',id,`Job: "${j?.title||id}" [${j?.client||'—'}] deleted along with related candidates/interviews`);
-  jobs=jobs.filter(j=>j.id!==id);candidates=candidates.filter(c=>c.jobId!==id);intSchedule=intSchedule.filter(i=>i.jobId!==id);
-  renderJobs();updateCounts();scheduleSave();
+  confirmDelete(`Delete job "${j?.title||id}"? Related candidates and interviews will also be removed.`,reason=>{
+    deletedRecords.push({id:nextDelId++,type:'Job',record:{job:j,relatedCandidates:candidates.filter(c=>c.jobId===id),relatedInterviews:intSchedule.filter(i=>i.jobId===id)},reason,deletedAt:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),deletedBy:_currentUser||'—'});
+    logAudit('Deleted','Job',id,`"${j?.title||id}" [${j?.client||'—'}] — Reason: ${reason}`);
+    jobs=jobs.filter(j=>j.id!==id);candidates=candidates.filter(c=>c.jobId!==id);intSchedule=intSchedule.filter(i=>i.jobId!==id);
+    renderJobs();updateCounts();scheduleSave();
+    showMsg('✓ Job moved to Recycle Bin');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1226,11 +1263,14 @@ function saveCandidate(){
   if(newStage==='Hired'&&prevStage!=='Hired'&&savedCand) autoCreateSelection(savedCand);
 }
 function deleteCand(id){
-  if(!confirm('Delete this candidate?'))return;
   const cd=getCand(id);
-  logAudit('Deleted','Candidate',id,`${cd?.name||id} (stage: ${cd?.stage||'—'}) deleted`);
-  candidates=candidates.filter(c=>c.id!==id);intSchedule=intSchedule.filter(i=>i.candidateId!==id);
-  renderCandidates();updateCounts();scheduleSave();
+  confirmDelete(`Delete candidate "${cd?.name||id}"?`,reason=>{
+    deletedRecords.push({id:nextDelId++,type:'Candidate',record:cd,reason,deletedAt:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),deletedBy:_currentUser||'—'});
+    logAudit('Deleted','Candidate',id,`${cd?.name||id} (stage: ${cd?.stage||'—'}) — Reason: ${reason}`);
+    candidates=candidates.filter(c=>c.id!==id);intSchedule=intSchedule.filter(i=>i.candidateId!==id);
+    renderCandidates();updateCounts();scheduleSave();
+    showMsg('✓ Candidate moved to Recycle Bin');
+  });
 }
 function viewCandidate(id){
   const c=getCand(id),job=getJob(c.jobId),cInts=intSchedule.filter(i=>i.candidateId===id);
@@ -1284,11 +1324,13 @@ function autoFillJobFromCand(){
 function scheduleNextRound(candId, roundType){
   editISId=null;
   const c=getCand(candId);
-  // Issue 1: block L2/Client if prior round feedback is missing
+  // Block L2/Client/HR if prior round feedback is missing
   const L1_TYPES=['L1 Round','Phone Screen','Video Call','Technical'];
   const L2_TYPES=['L2 Round'];
+  const CLIENT_TYPES=['Client Round','On-site'];
   const isL2=(roundType==='L2 Round');
-  const isClient=(roundType==='Client Round'||roundType==='On-site');
+  const isClient=CLIENT_TYPES.includes(roundType);
+  const isHR=(roundType==='HR Round');
   if(isL2){
     const pendingL1=intSchedule.filter(i=>i.candidateId===candId&&L1_TYPES.includes(i.type)&&i.feedback.length===0);
     if(pendingL1.length){
@@ -1303,12 +1345,23 @@ function scheduleNextRound(candId, roundType){
       return;
     }
   }
+  if(isHR){
+    const pendingClient=intSchedule.filter(i=>i.candidateId===candId&&CLIENT_TYPES.includes(i.type)&&i.feedback.length===0);
+    if(pendingClient.length){
+      showErr('Cannot schedule HR Round — Client Round feedback is still pending. Please submit Client feedback first.');
+      return;
+    }
+  }
+  // Track original stage so we can roll back if the user cancels the form (Task 7)
+  _schedOrigCandId=candId;
+  _schedOrigStage=c?.stage||null;
+  // NOTE: stage is NOT advanced here — it advances in saveIntSched() only after the form is saved
   sv('int-sched-modal-title','Schedule '+roundType);
-  // Auto-advance stage to Interview for ANY round when candidate is still in Applied/Screening
-  if(c&&['Applied','Screening'].includes(c.stage)){c.stage='Interview';renderPipeline();updateCounts();scheduleSave();}
   document.getElementById('isf-cand').innerHTML=candidates.map(x=>`<option value="${x.id}"${x.id===candId?' selected':''}>${x.name}</option>`).join('');
   document.getElementById('isf-job').innerHTML=jobs.map(j=>`<option value="${j.id}"${j.id===(c?.jobId)?' selected':''}>${j.title}</option>`).join('');
   fv('isf-type',roundType);fv('isf-date','');fv('isf-time','');fv('isf-interviewers','');fv('isf-notes','');fv('isf-status','Scheduled');
+  // Block past dates (Task 4)
+  const df=document.getElementById('isf-date');if(df)df.min=today();
   openModal('int-sched-modal');
 }
 function renderPipeline(){
@@ -1334,7 +1387,7 @@ function renderPipeline(){
         <div class="kc-actions" onclick="event.stopPropagation()" style="flex-wrap:wrap;gap:3px">
           ${nextS[stage]?`<button class="btn btn-sm btn-success" style="font-size:10px;padding:3px 6px" onclick="moveCand(${c.id},'${nextS[stage]}')">→ ${nextS[stage]}</button>`:''}
           ${stage==='Screening'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#DBEAFE;color:#1D4ED8;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'L1 Round')">📅 L1</button>`:''}
-          ${stage==='Interview'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#EDE9FE;color:#5B21B6;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'L2 Round')">📅 L2</button><button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#CFFAFE;color:#164E63;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'Client Round')">📅 Client</button>`:''}
+          ${stage==='Interview'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#EDE9FE;color:#5B21B6;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'L2 Round')">📅 L2</button><button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#CFFAFE;color:#164E63;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'Client Round')">📅 Client</button><button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#D1FAE5;color:#065F46;border:none;font-weight:700" onclick="scheduleNextRound(${c.id},'HR Round')">👔 HR</button>`:''}
           ${stage==='Offer'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 6px;background:#A7F3D0;color:#065F46;border:none;font-weight:700" onclick="moveCand(${c.id},'Hired')">✓ Hired</button>`:''}
           ${!['Hired','Rejected'].includes(stage)?`<button class="btn btn-sm" style="font-size:10px;padding:3px 5px;background:var(--danger-light);color:var(--danger);border:none" onclick="moveCand(${c.id},'Rejected')">✕</button>`:''}
           ${stage==='Rejected'?`<button class="btn btn-sm" style="font-size:10px;padding:3px 5px;background:#EFF6FF;color:#1D4ED8;border:none" onclick="moveCand(${c.id},'Applied')">↩ Restore</button>`:''}
@@ -1402,13 +1455,15 @@ function openISModal(id){
   editISId=id||null;sv('int-sched-modal-title',id?'Edit Interview':'Schedule Interview');
   document.getElementById('isf-cand').innerHTML=candidates.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   document.getElementById('isf-job').innerHTML=jobs.map(j=>`<option value="${j.id}">${j.title}</option>`).join('');
-  if(id){const i=getIS(id);fv('isf-cand',i.candidateId);fv('isf-job',i.jobId);fv('isf-date',i.date);fv('isf-time',i.time);fv('isf-type',i.type);fv('isf-status',i.status);fv('isf-interviewers',i.interviewers.join(', '));fv('isf-notes',i.notes);}
-  else{['isf-date','isf-time','isf-interviewers','isf-notes'].forEach(x=>fv(x,''));fv('isf-status','Scheduled');autoFillJobFromCand();}
+  if(id){const i=getIS(id);fv('isf-cand',i.candidateId);fv('isf-job',i.jobId);fv('isf-date',i.date);fv('isf-time',i.time);fv('isf-type',i.type);fv('isf-status',i.status);fv('isf-interviewers',i.interviewers.join(', '));fv('isf-notes',i.notes);const df2=document.getElementById('isf-date');if(df2)df2.min='';}
+  else{['isf-date','isf-time','isf-interviewers','isf-notes'].forEach(x=>fv(x,''));fv('isf-status','Scheduled');autoFillJobFromCand();const df2=document.getElementById('isf-date');if(df2)df2.min=today();}
   openModal('int-sched-modal');
 }
 function saveIntSched(){
   const date=gv('isf-date'),time=gv('isf-time');
   if(!date||!time){showErr('Date and time required.');return;}
+  // Block past dates for new schedules (Task 4)
+  if(!editISId&&date<today()){showErr('Interview cannot be scheduled in the past. Please select today or a future date.');return;}
   const data={candidateId:+gv('isf-cand'),jobId:+gv('isf-job'),date,time,type:gv('isf-type'),status:gv('isf-status'),interviewers:gv('isf-interviewers').split(',').map(s=>s.trim()).filter(Boolean),notes:gv('isf-notes')};
   const cname=getCand(data.candidateId)?.name||'#'+data.candidateId;
   if(editISId){
@@ -1416,14 +1471,26 @@ function saveIntSched(){
     Object.assign(getIS(editISId),data);
     const isdiff=_diffFields(isbefore,data,[['date','Date'],['time','Time'],['type','Type'],['status','Status'],['interviewers','Interviewers']]);
     logAudit('Modified','Interview',editISId,`${cname} — ${isdiff}`);
-  }else{const is={id:nextISId++,...data,feedback:[]};intSchedule.push(is);logAudit('Created','Interview',is.id,`${cname} — ${data.type} on ${data.date} at ${data.time}`);}
+  }else{
+    const is={id:nextISId++,...data,feedback:[]};
+    intSchedule.push(is);
+    // Advance stage to Interview now that a real schedule exists (Task 7)
+    const scheduledCand=getCand(data.candidateId);
+    if(scheduledCand&&['Applied','Screening'].includes(scheduledCand.stage)){scheduledCand.stage='Interview';}
+    logAudit('Created','Interview',is.id,`${cname} — ${data.type} on ${data.date} at ${data.time}`);
+  }
+  // Clear stage tracking vars
+  _schedOrigCandId=null;_schedOrigStage=null;
   closeModal('int-sched-modal');renderIntSchedule();renderPipeline();updateCounts();scheduleSave();
 }
 function deleteIS(id){
-  if(!confirm('Delete this interview?'))return;
   const is=getIS(id),cname=getCand(is?.candidateId)?.name||'#'+(is?.candidateId||id);
-  logAudit('Deleted','Interview',id,`${cname} — ${is?.type||'?'} on ${is?.date||'?'} deleted`);
-  intSchedule=intSchedule.filter(i=>i.id!==id);renderIntSchedule();updateCounts();scheduleSave();
+  confirmDelete(`Delete interview — ${cname} (${is?.type||'?'} on ${is?.date||'?'})?`,reason=>{
+    deletedRecords.push({id:nextDelId++,type:'Interview',record:is,reason,deletedAt:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),deletedBy:_currentUser||'—'});
+    logAudit('Deleted','Interview',id,`${cname} — ${is?.type||'?'} on ${is?.date||'?'} — Reason: ${reason}`);
+    intSchedule=intSchedule.filter(i=>i.id!==id);renderIntSchedule();updateCounts();scheduleSave();
+    showMsg('✓ Interview moved to Recycle Bin');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1521,7 +1588,15 @@ function updateCandStage(candId,stage){
   }
   renderStageButtons(c,i);scheduleSave();
 }
-function showFbForm(){document.getElementById('fb-form').style.display='block';['fb-name','fb-comments'].forEach(x=>fv(x,''));fv('fb-rating','3');fv('fb-rec','proceed');document.getElementById('fb-name').focus();}
+function showFbForm(){
+  document.getElementById('fb-form').style.display='block';
+  fv('fb-comments','');fv('fb-rating','3');fv('fb-rec','proceed');
+  // Auto-fill "Your Name" with the first interviewer from the schedule (Task 5)
+  const intv=getIS(activeFbId);
+  const firstInterviewer=intv&&intv.interviewers&&intv.interviewers.length>0?intv.interviewers[0]:'';
+  fv('fb-name',firstInterviewer);
+  document.getElementById('fb-name').focus();
+}
 function submitFeedback(){
   const name=gv('fb-name'),comments=gv('fb-comments');
   if(!name||!comments){showErr('Name and comments required.');return;}
@@ -1532,13 +1607,14 @@ function submitFeedback(){
   i.status='Completed';
   // Determine new log status based on interview round and recommendation
   const roundMap={
-    'L1 Round':    {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
-    'Phone Screen':{proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
-    'Video Call':  {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
-    'Technical':   {proceed:'L1 Select', hold:'L1 On Hold', reject:'L1 Reject'},
-    'L2 Round':    {proceed:'Final Select', hold:'L2 On Hold', reject:'L2 Reject'},
-    'Client Round':{proceed:'Final Select', hold:'L2 Completed – Waiting for Client', reject:'L2 Reject'},
-    'On-site':     {proceed:'Final Select', hold:'L2 Completed – Waiting for Client', reject:'L2 Reject'},
+    'L1 Round':    {proceed:'L1 Select',    hold:'L1 On Hold',                             reject:'L1 Reject'},
+    'Phone Screen':{proceed:'L1 Select',    hold:'L1 On Hold',                             reject:'L1 Reject'},
+    'Video Call':  {proceed:'L1 Select',    hold:'L1 On Hold',                             reject:'L1 Reject'},
+    'Technical':   {proceed:'L1 Select',    hold:'L1 On Hold',                             reject:'L1 Reject'},
+    'L2 Round':    {proceed:'Final Select', hold:'L2 On Hold',                             reject:'L2 Reject'},
+    'Client Round':{proceed:'Final Select', hold:'L2 Completed – Waiting for Client',      reject:'L2 Reject'},
+    'On-site':     {proceed:'Final Select', hold:'L2 Completed – Waiting for Client',      reject:'L2 Reject'},
+    'HR Round':    {proceed:'HR Select',    hold:'HR On Hold',                             reject:'HR Reject'},
   };
   const newStatus=(roundMap[i.type]||{})[rec];
   if(newStatus&&cand){
@@ -1574,6 +1650,10 @@ function submitFeedback(){
   // Show next-round scheduling buttons when proceed on L1/L2
   const nrDiv=document.getElementById('fb-next-round-btns');
   const candId=i.candidateId;
+  // Reset all next-round buttons to default visibility first
+  document.getElementById('btn-sched-l2').style.display='';
+  document.getElementById('btn-sched-client').style.display='';
+  document.getElementById('btn-sched-hr').style.display='none';
   if(rec==='proceed'&&(i.type==='L1 Round'||i.type==='Phone Screen'||i.type==='Video Call'||i.type==='Technical')){
     nrDiv.style.display='block';
     document.getElementById('btn-sched-l2').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'L2 Round');};
@@ -1582,6 +1662,12 @@ function submitFeedback(){
     nrDiv.style.display='block';
     document.getElementById('btn-sched-l2').style.display='none';
     document.getElementById('btn-sched-client').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'Client Round');};
+  } else if(rec==='proceed'&&(i.type==='Client Round'||i.type==='On-site')){
+    nrDiv.style.display='block';
+    document.getElementById('btn-sched-l2').style.display='none';
+    document.getElementById('btn-sched-client').style.display='none';
+    document.getElementById('btn-sched-hr').style.display='';
+    document.getElementById('btn-sched-hr').onclick=()=>{closeModal('feedback-modal');scheduleNextRound(candId,'HR Round');};
   } else {
     nrDiv.style.display='none';
   }
@@ -1641,10 +1727,13 @@ function saveLog(){
   renderIntLog();updateCounts();scheduleSave();
 }
 function deleteLog(id){
-  if(!confirm('Delete this log entry?'))return;
   const lg=getLog(id);
-  logAudit('Deleted','Interview Log',id,`${lg?.candidateName||id} [${lg?.client||'—'}] deleted`);
-  intLog=intLog.filter(l=>l.id!==id);renderIntLog();updateCounts();scheduleSave();
+  confirmDelete(`Delete log entry for "${lg?.candidateName||id}"?`,reason=>{
+    deletedRecords.push({id:nextDelId++,type:'Interview Log',record:lg,reason,deletedAt:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),deletedBy:_currentUser||'—'});
+    logAudit('Deleted','Interview Log',id,`${lg?.candidateName||id} [${lg?.client||'—'}] — Reason: ${reason}`);
+    intLog=intLog.filter(l=>l.id!==id);renderIntLog();updateCounts();scheduleSave();
+    showMsg('✓ Log entry moved to Recycle Bin');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1751,10 +1840,13 @@ function saveSelection(){
   closeModal('sel-modal');renderSelections();renderCandidates();renderPipeline();updateCounts();scheduleSave();
 }
 function deleteSel(id){
-  if(!confirm('Delete this selection?'))return;
   const sl=getSel(id);
-  logAudit('Deleted','Selection',id,`${sl?.candidateName||id} [${sl?.client||'—'}] (${sl?.status||'—'}) deleted`);
-  selections=selections.filter(s=>s.id!==id);renderSelections();updateCounts();scheduleSave();
+  confirmDelete(`Delete selection for "${sl?.candidateName||id}" [${sl?.client||'—'}]?`,reason=>{
+    deletedRecords.push({id:nextDelId++,type:'Selection',record:sl,reason,deletedAt:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),deletedBy:_currentUser||'—'});
+    logAudit('Deleted','Selection',id,`${sl?.candidateName||id} [${sl?.client||'—'}] (${sl?.status||'—'}) — Reason: ${reason}`);
+    selections=selections.filter(s=>s.id!==id);renderSelections();updateCounts();scheduleSave();
+    showMsg('✓ Selection moved to Recycle Bin');
+  });
 }
 function quickSelStatus(id,status){
   const s=getSel(id);if(!s)return;
@@ -1976,7 +2068,7 @@ const filterCandsByJob=id=>{fv('cand-job-f',id);showPage('candidates');};
 const viewJobPipeline=id=>{document.getElementById('pipeline-job-f').value=id;showPage('pipeline');};
 const stageC=s=>({Applied:'applied',Screening:'screening',Interview:'interview',Offer:'offer',Hired:'hired',Rejected:'rejected','On Hold':'on-hold'})[s]||'applied';
 const statusC=s=>({Open:'open','On Hold':'on-hold',Closed:'closed'})[s]||'open';
-function l1BadgeC(s){const m={'Scheduled':'bl-scheduled','No Show':'bl-no-show','Rescheduled':'bl-rescheduled','L1 Completed – Feedback Pending':'bl-l1-fb','L1 Select':'bl-l1-sel','L1 Reject':'bl-l1-rej','L1 On Hold':'bl-l1-hold','L2 Scheduled':'bl-l2-sched','L2 Completed – Feedback Pending':'bl-l2-fb','L2 Completed – Waiting for Client':'bl-l2-wait','L2 Reject':'bl-l2-rej','L2 On Hold':'bl-l2-hold','Final Select':'bl-final','On Hold':'bl-hold','Waiting for Client Feedback':'bl-wait-client'};return m[s]||'bl-no-show';}
+function l1BadgeC(s){const m={'Scheduled':'bl-scheduled','No Show':'bl-no-show','Rescheduled':'bl-rescheduled','L1 Completed – Feedback Pending':'bl-l1-fb','L1 Select':'bl-l1-sel','L1 Reject':'bl-l1-rej','L1 On Hold':'bl-l1-hold','L2 Scheduled':'bl-l2-sched','L2 Completed – Feedback Pending':'bl-l2-fb','L2 Completed – Waiting for Client':'bl-l2-wait','L2 Reject':'bl-l2-rej','L2 On Hold':'bl-l2-hold','Final Select':'bl-final','On Hold':'bl-hold','Waiting for Client Feedback':'bl-wait-client','HR Select':'bl-final','HR Reject':'bl-l2-rej','HR On Hold':'bl-l2-hold'};return m[s]||'bl-no-show';}
 function selBadgeC(s){const m={'Final Select':'bs-final','Offer Yet to Be Released':'bs-offer-yet','Offer Released':'bs-offer-rel','Joined':'bs-joined','Offer Dropped':'bs-offer-drop','On Hold':'bs-hold','Waiting for Client Feedback':'bs-wait'};return m[s]||'bl-no-show';}
 
 let _sbTimer,_errTimer;
@@ -1989,6 +2081,93 @@ function showSaveBar(saving,error=false){
 }
 function showErr(msg){const t=document.getElementById('err-toast');t.textContent='⚠ '+msg;t.style.background='';t.classList.add('show');clearTimeout(_errTimer);_errTimer=setTimeout(()=>t.classList.remove('show'),5000);}
 function showMsg(msg){const t=document.getElementById('err-toast');t.textContent=msg;t.style.background='#059669';t.classList.add('show');clearTimeout(_errTimer);_errTimer=setTimeout(()=>{t.classList.remove('show');t.style.background='';},3000);}
+
+// ═══════════════════════════════════════════════════════════
+// SOFT DELETE — confirm modal + recycle bin
+// ═══════════════════════════════════════════════════════════
+function confirmDelete(msg,onConfirm){
+  _pendingDeleteFn=onConfirm;
+  sv('del-confirm-msg',msg);
+  fv('del-reason','');
+  openModal('del-confirm-modal');
+}
+function _execDelete(){
+  const reason=gv('del-reason').trim();
+  if(!reason){showErr('Please enter a reason for deletion.');return;}
+  closeModal('del-confirm-modal');
+  if(_pendingDeleteFn){_pendingDeleteFn(reason);}_pendingDeleteFn=null;
+}
+function renderRecycleBin(){
+  const body=document.getElementById('recycle-bin-body');if(!body)return;
+  if(!deletedRecords.length){
+    body.innerHTML='<div class="empty-state">Recycle Bin is empty — nothing has been deleted yet.</div>';
+    return;
+  }
+  const typeIcon={Job:'💼',Candidate:'👤',Interview:'📅','Interview Log':'📋',Selection:'✅'};
+  body.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Type</th><th>Record</th><th>Reason</th><th>Deleted By</th><th>Deleted At</th><th>Actions</th></tr></thead>
+    <tbody>${[...deletedRecords].reverse().map((dr,ri)=>{
+      const idx=deletedRecords.length-1-ri;
+      const rec=dr.record;
+      let label='—';
+      if(dr.type==='Candidate')label=rec.name||'—';
+      else if(dr.type==='Job')label=(rec.job?.title||rec.title||'—');
+      else if(dr.type==='Interview'){const c=getCand(rec.candidateId);label=`${c?.name||'?'} — ${rec.type||'?'} (${rec.date||'?'})`;}
+      else if(dr.type==='Interview Log')label=`${rec.candidateName||'?'} [${rec.client||'?'}]`;
+      else if(dr.type==='Selection')label=`${rec.candidateName||'?'} [${rec.client||'?'}]`;
+      return`<tr>
+        <td><span class="tag">${typeIcon[dr.type]||'📄'} ${dr.type}</span></td>
+        <td style="font-weight:600;font-size:13px">${label}</td>
+        <td style="font-size:12px;color:var(--gray-600);max-width:200px">${dr.reason||'—'}</td>
+        <td style="font-size:12px;color:var(--gray-500)">${dr.deletedBy||'—'}</td>
+        <td style="font-size:11px;color:var(--gray-400)">${dr.deletedAt||'—'}</td>
+        <td><div class="actions-cell">
+          <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46;border:none;font-weight:700" onclick="restoreRecord(${idx})">↩ Restore</button>
+          <button class="btn btn-icon btn-sm" style="background:#FEE2E2;color:#991B1B;border:none" onclick="permanentDelete(${idx})" title="Delete permanently">🗑</button>
+        </div></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+function restoreRecord(idx){
+  const dr=deletedRecords[idx];if(!dr)return;
+  switch(dr.type){
+    case 'Candidate':if(dr.record){candidates.push(dr.record);}break;
+    case 'Job':if(dr.record){if(dr.record.job)jobs.push(dr.record.job);else jobs.push(dr.record);}break;
+    case 'Interview':if(dr.record)intSchedule.push(dr.record);break;
+    case 'Interview Log':if(dr.record)intLog.push(dr.record);break;
+    case 'Selection':if(dr.record)selections.push(dr.record);break;
+  }
+  logAudit('Restored',dr.type,dr.record?.id||'?',`Restored from Recycle Bin`);
+  deletedRecords.splice(idx,1);
+  renderRecycleBin();updateCounts();scheduleSave();
+  showMsg('✓ Record restored successfully.');
+}
+function permanentDelete(idx){
+  if(!confirm('Permanently delete this record? This cannot be undone.'))return;
+  deletedRecords.splice(idx,1);
+  renderRecycleBin();updateCounts();scheduleSave();
+  showMsg('✓ Record permanently deleted.');
+}
+function clearRecycleBin(){
+  if(!deletedRecords.length){showErr('Recycle Bin is already empty.');return;}
+  if(!confirm(`Permanently delete all ${deletedRecords.length} record(s) in the Recycle Bin? This cannot be undone.`))return;
+  deletedRecords=[];
+  renderRecycleBin();updateCounts();scheduleSave();
+  showMsg('✓ Recycle Bin emptied.');
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERVIEW SCHEDULE CANCEL / ROUND PICKER CANCEL (Task 7)
+// ═══════════════════════════════════════════════════════════
+function cancelIntSchedModal(){
+  // If stage was never changed (we removed premature advance), nothing to roll back
+  _schedOrigCandId=null;_schedOrigStage=null;
+  closeModal('int-sched-modal');
+}
+function cancelRoundPicker(){
+  // Stage was NOT changed when round picker opened (moveCand returns early without changing stage)
+  _schedOrigCandId=null;_schedOrigStage=null;
+  closeModal('round-picker-modal');
+}
 
 // ═══════════════════════════════════════════════════════════
 // INIT
@@ -2328,6 +2507,27 @@ window.addEventListener('DOMContentLoaded',async()=>{
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('users-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal (reason required) -->
+<div class="modal-overlay" id="del-confirm-modal">
+  <div class="modal" style="max-width:430px">
+    <div class="modal-header"><h2>🗑 Confirm Delete</h2><button class="modal-close" onclick="closeModal('del-confirm-modal')">✕</button></div>
+    <div class="modal-body">
+      <div id="del-confirm-msg" style="font-size:14px;font-weight:600;color:var(--gray-800);margin-bottom:16px"></div>
+      <div class="form-group">
+        <label>Reason for Deletion *</label>
+        <textarea id="del-reason" placeholder="Enter reason for deleting this record…" style="min-height:80px"></textarea>
+      </div>
+      <div style="background:#FEF2F2;border-radius:7px;padding:11px;font-size:12px;color:#991B1B;margin-top:10px;border:1px solid #FECACA">
+        ⚠ This record will be moved to the <strong>Recycle Bin</strong> and can be restored at any time.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('del-confirm-modal')">Cancel</button>
+      <button class="btn" style="background:var(--danger);color:white;font-weight:700" onclick="_execDelete()">🗑 Delete</button>
+    </div>
   </div>
 </div>
 

@@ -1351,9 +1351,10 @@ function scheduleNextRound(candId, roundType){
     }
   }
   if(isHR){
-    const pendingClient=intSchedule.filter(i=>i.candidateId===candId&&CLIENT_TYPES.includes(i.type)&&i.feedback.length===0);
-    if(pendingClient.length){
-      showErr('Cannot schedule HR Round — Client Round feedback is still pending. Please submit Client feedback first.');
+    const pendingAny=intSchedule.filter(i=>i.candidateId===candId&&i.type!=='HR Round'&&(!i.feedback||i.feedback.length===0));
+    if(pendingAny.length){
+      const rounds=[...new Set(pendingAny.map(i=>i.type))].join(', ');
+      showErr(`Cannot schedule HR Round — feedback is still pending for: ${rounds}. Please submit all prior interview feedback first.`);
       return;
     }
   }

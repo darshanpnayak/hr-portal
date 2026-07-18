@@ -1242,6 +1242,11 @@ function saveCandidate(){
   if(dupeName&&!editCId){showErr(`A candidate named "${dupeName.name}" already exists. Use a middle initial or suffix to distinguish.`);return;}
   const newStage=gv('cf-stage');
   const prevStage=editCId?getCand(editCId)?.stage:'';
+  // Block stage change via edit form if a scheduled interview has no feedback yet
+  if(editCId&&newStage!==prevStage&&_hasPendingFeedback(editCId)){
+    showErr('Cannot change status — this candidate has a scheduled interview with no feedback. Please submit the interview feedback first.');
+    return;
+  }
   const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),jobId,stage:newStage,notes:gv('cf-notes')};
   const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   let savedCand;
@@ -1396,16 +1401,17 @@ function renderPipeline(){
     </div></div>`;
   }).join('');
 }
+// Returns true if candidate has any Scheduled interview with no feedback yet
+function _hasPendingFeedback(candId){
+  return intSchedule.some(i=>i.candidateId===candId&&i.status==='Scheduled'&&(!i.feedback||i.feedback.length===0));
+}
 function moveCand(id,stage){
   const c=getCand(id);if(!c)return;
   const prev=c.stage;
-  // Block Interview → Offer if there are still "Scheduled" interviews pending
-  if(stage==='Offer'&&prev==='Interview'){
-    const pending=intSchedule.filter(i=>i.candidateId===id&&i.status==='Scheduled');
-    if(pending.length){
-      showErr(`Cannot move to Offer — ${pending.length} interview(s) still Scheduled. Please complete the interview and submit feedback first.`);
-      return;
-    }
+  // Block any stage change if a scheduled interview has no feedback yet
+  if(_hasPendingFeedback(id)){
+    showErr('Cannot change status — this candidate has a scheduled interview with no feedback. Please submit the interview feedback first.');
+    return;
   }
   // Screening → Interview: pop round picker instead of just moving
   if(stage==='Interview'&&prev==='Screening'){
@@ -1578,6 +1584,11 @@ function openOfferModal(selId,fallbackName){
 }
 function updateCandStage(candId,stage){
   const c=getCand(candId);if(!c)return;
+  // Block stage change from feedback modal if a scheduled interview still has no feedback
+  if(_hasPendingFeedback(candId)){
+    showErr('Cannot change status — submit interview feedback first (click "Add Feedback" above).');
+    return;
+  }
   const prevStage=c.stage;
   c.stage=stage;
   const i=getIS(activeFbId);

@@ -513,6 +513,7 @@ window.addEventListener('load', function(){
             <th style="width:110px">Entity</th>
             <th style="width:60px">ID</th>
             <th>Summary</th>
+            <th id="al-del-col" style="width:50px;display:none"></th>
           </tr></thead>
           <tbody id="audit-tbody"></tbody>
         </table>
@@ -2187,6 +2188,10 @@ function clearAuditLog(){
 }
 function renderAuditLog(){
   const ef=gv('al-entity-f'),af=gv('al-action-f'),uf=gv('al-user-f');
+  const isAdmin=_loggedInUser?.role==='admin';
+  // Show/hide the delete column header based on role
+  const delCol=document.getElementById('al-del-col');
+  if(delCol)delCol.style.display=isAdmin?'':'none';
   // Populate user filter dynamically
   const curUser=document.getElementById('al-user-f').value;
   const allUsers=[...new Set(auditLog.map(a=>a.user).filter(Boolean))].sort();
@@ -2196,6 +2201,7 @@ function renderAuditLog(){
     (!ef||a.entity===ef)&&(!af||a.action===af)&&(!uf||a.user===uf)
   );
   const actionStyle={Created:'background:#D1FAE5;color:#065F46',Modified:'background:#DBEAFE;color:#1E40AF',Deleted:'background:#FEE2E2;color:#991B1B'};
+  const colspan=isAdmin?7:6;
   document.getElementById('audit-tbody').innerHTML=rows.length
     ?rows.map(a=>`<tr>
       <td style="font-size:11px;color:var(--gray-400);white-space:nowrap">${a.timestamp}</td>
@@ -2204,8 +2210,16 @@ function renderAuditLog(){
       <td style="font-size:12px;color:var(--gray-600)">${a.entity}</td>
       <td style="font-size:11px;color:var(--gray-400);text-align:center">${a.recordId}</td>
       <td style="font-size:12px;color:var(--gray-700)">${a.summary}</td>
+      ${isAdmin?`<td><button class="btn btn-icon btn-sm" style="color:var(--danger)" onclick="deleteAuditEntry(${a.id})" title="Delete this entry">🗑</button></td>`:''}
     </tr>`).join('')
-    :'<tr><td colspan="6" class="empty-state">No audit entries found</td></tr>';
+    :`<tr><td colspan="${colspan}" class="empty-state">No audit entries found</td></tr>`;
+}
+function deleteAuditEntry(id){
+  if(_loggedInUser?.role!=='admin'){showErr('Only admins can delete audit entries.');return;}
+  if(!confirm('Delete this audit log entry? This cannot be undone.'))return;
+  auditLog=auditLog.filter(a=>a.id!==id);
+  renderAuditLog();scheduleSave();
+  showMsg('✓ Audit entry deleted.');
 }
 
 // ═══════════════════════════════════════════════════════════

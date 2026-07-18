@@ -343,13 +343,11 @@ window.addEventListener('load', function(){
   </div>
   <div class="sb-file" style="border-top:1px solid var(--gray-200);padding-top:10px;margin-top:2px">
     <div class="sf-lbl">Signed in as</div>
-    <div id="sb-user-name" style="font-weight:700;font-size:13px;color:var(--gray-800);margin-top:3px;word-break:break-all">—</div>
+    <div id="sb-user-name" style="font-weight:700;font-size:13px;color:#fff;margin-top:3px;word-break:break-all">—</div>
     <div id="sb-user-role" style="font-size:11px;color:var(--gray-400);margin-bottom:8px"></div>
     <button id="sb-manage-btn" class="sf-btn" onclick="openUsersModal()" style="display:none;width:100%;margin-bottom:4px">👥 Manage Users</button>
     <button class="sf-btn" onclick="openChgPwdModal(null)" style="width:100%;margin-bottom:4px">🔑 Change Password</button>
     <button class="sf-btn" onclick="doLogout()" style="width:100%;color:#DC2626;font-weight:700">⎋ Sign Out</button>
-    <button class="sf-btn" onclick="downloadBundled()" id="offline-btn" style="width:100%;margin-top:8px;background:#F0FDF4;color:#065F46;border:1px solid #6EE7B7;font-weight:700" title="Create a self-contained version that works on OneDrive/SharePoint">📦 Offline Version</button>
-    <div id="offline-progress" style="display:none;font-size:11px;color:var(--gray-400);text-align:center;margin-top:5px;line-height:1.5"></div>
   </div>
 </aside>
 
@@ -2175,60 +2173,6 @@ function cancelRoundPicker(){
 // ═══════════════════════════════════════════════════════════
 
 
-// ─── Offline bundler ───
-async function downloadBundled(){
-  const btn=document.getElementById('offline-btn');
-  const prog=document.getElementById('offline-progress');
-  btn.disabled=true;btn.textContent='⏳ Bundling…';
-  prog.style.display='';
-
-  const XLSX_URL ='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  const CHART_URL='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
-
-  try{
-    prog.textContent='Downloading SheetJS…';
-    const xlsxJs=await fetch(XLSX_URL).then(r=>{if(!r.ok)throw new Error('Failed to fetch SheetJS');return r.text();});
-    prog.textContent='Downloading Chart.js…';
-    const chartJs=await fetch(CHART_URL).then(r=>{if(!r.ok)throw new Error('Failed to fetch Chart.js');return r.text();});
-
-    prog.textContent='Bundling…';
-    // Use the captured static source (before dynamic rendering)
-    let src=window._PAGE_SRC||document.documentElement.outerHTML;
-
-    // Replace CDN script tags with inline versions
-    const inlineTag=(url,js,label)=>{
-      const re=new RegExp('<script\\s+src="'+url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'"\\s*>\\s*<\\/script>','g');
-      const result=src.replace(re,`<script>/* ${label} — bundled */\n${js}\n<\/script>`);
-      if(result===src){
-        // fallback if regex didn't match
-        src=src.replace(`<script src="${url}">`,`<script>/* ${label} — bundled */\n${js}\n`)
-               .replace(`<script src="${url}"><\/script>`,`<script>/* ${label} — bundled */\n${js}\n<\/script>`);
-      }
-      return result;
-    };
-    src=inlineTag(XLSX_URL,xlsxJs,'SheetJS');
-    src=inlineTag(CHART_URL,chartJs,'Chart.js');
-
-    // Remove the CDN failure guard (no longer needed)
-    src=src.replace(/<!-- CDN failure guard[\s\S]*?<\/script>/m,'<!-- Libraries bundled inline -->');
-
-    prog.textContent='Preparing download…';
-    const blob=new Blob([src],{type:'text/html;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download='hr-recruitment-portal-bundled.html';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
-
-    btn.textContent='✅ Downloaded!';btn.style.background='#D1FAE5';
-    prog.textContent='Check your Downloads folder. Upload that file to OneDrive.';
-    setTimeout(()=>{btn.disabled=false;btn.textContent='📦 Offline Version';btn.style.background='#F0FDF4';prog.style.display='none';},6000);
-  }catch(e){
-    btn.textContent='📦 Offline Version';btn.disabled=false;
-    prog.textContent='❌ '+e.message+' — check internet connection.';
-    setTimeout(()=>{prog.style.display='none';},5000);
-  }
-}
 
 // ═══════════════════════════════════════════════════════════
 // AUDIT LOG
@@ -2336,14 +2280,13 @@ async function doLogin(){
 
     // ── Hardcoded admin bypass ──────────────────────────────────────────────
     // If the user logs in as admin/Admin@123, always succeed and auto-repair
-    // any stale localStorage state. This works even if localStorage is broken.
+    // the admin record — but preserve all other users in the list.
     if(uname.toLowerCase()==='admin' && h===adminHash){
-      try{
-        localStorage.removeItem('hrp_users');
-        localStorage.setItem('hrp_auth_ver',AUTH_VER);
-      }catch(e){}
+      try{localStorage.setItem('hrp_auth_ver',AUTH_VER);}catch(e){}
       const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      users=[{username:'admin',pwdHash:adminHash,role:'admin',createdAt:now}];
+      let adminRec=users.find(u=>u.username.toLowerCase()==='admin');
+      if(!adminRec){users.push({username:'admin',pwdHash:adminHash,role:'admin',createdAt:now});}
+      else{adminRec.pwdHash=adminHash;adminRec.role='admin';}
       try{_saveUsers();}catch(e){}
     }
     // ────────────────────────────────────────────────────────────────────────

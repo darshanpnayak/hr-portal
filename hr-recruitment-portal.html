@@ -1037,6 +1037,7 @@ function showPage(name){
   if(name==='int-schedule') ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openISModal()">+ Schedule Interview</button>';
   if(name==='int-log')      ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openLogModal()">+ Add to Log</button>';
   if(name==='selections')   ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openSelModal()">+ Add Selection</button>';
+  if(name==='auditlog'&&_loggedInUser?.role==='admin') ta.innerHTML+='<button class="btn btn-sm" style="background:#FEE2E2;color:#991B1B;border:none;font-weight:700" onclick="clearAuditLog()">🗑 Clear Audit Log</button>';
   if(name==='dashboard') renderDashboard();
   if(name==='analytics')  renderAnalytics();
   if(name==='jobs')       renderJobs();
@@ -2232,6 +2233,14 @@ async function downloadBundled(){
 // ═══════════════════════════════════════════════════════════
 // AUDIT LOG
 // ═══════════════════════════════════════════════════════════
+function clearAuditLog(){
+  if(_loggedInUser?.role!=='admin'){showErr('Only admins can clear the Audit Log.');return;}
+  if(!auditLog.length){showErr('Audit Log is already empty.');return;}
+  if(!confirm(`Clear all ${auditLog.length} audit log entr${auditLog.length===1?'y':'ies'}? This cannot be undone.`))return;
+  auditLog=[];nextAuditId=1;
+  renderAuditLog();scheduleSave();
+  showMsg('✓ Audit Log cleared.');
+}
 function renderAuditLog(){
   const ef=gv('al-entity-f'),af=gv('al-action-f'),uf=gv('al-user-f');
   // Populate user filter dynamically

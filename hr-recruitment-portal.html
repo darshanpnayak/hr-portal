@@ -785,6 +785,7 @@ const AUDIT_HDR = ['id','timestamp','user','action','entity','recordId','summary
 // ═══════════════════════════════════════════════════════════
 let jobs=[], candidates=[], intSchedule=[], intLog=[], selections=[];
 let nextJId=1,nextCId=1,nextISId=1,nextLId=1,nextSId=1;
+let _currentPage='dashboard', _syncIntervalId=null;
 let editJId=null,editCId=null,editISId=null,editLId=null,editSId=null,activeFbId=null;
 let fileHandle=null,fileName='',saveTimer=null,activeIntTab='scheduled';
 // Pending-hire gate: tracks a hire in progress until CTC/DOJ is confirmed
@@ -943,7 +944,7 @@ async function loadFromGitHub(){
     document.getElementById('main').style.display='block';
     updateCounts();showPage('dashboard');
     // Auto-push localStorage data to GitHub so all devices get the latest immediately
-    if((localStorage.getItem('hrp_gh_token')||'').trim()){
+    if(_getWriteToken()){
       showMsg('↑ Pushing your local data to GitHub…');
       setTimeout(()=>_pushDataToGitHub(),1500);
     }
@@ -976,6 +977,25 @@ async function loadWB(file){
   updateCounts();showPage('dashboard');
 }
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);_scheduleGHDataSave();}
+// ── Auto-sync: pull latest data from GitHub every 90s so all users see live changes ──
+async function _autoSyncFromGitHub(){
+  // Skip if a modal is open (user may be mid-edit)
+  if(document.querySelectorAll('.modal-overlay.open').length>0)return;
+  // Skip if a pending save is in flight (data will push to GitHub momentarily)
+  if(saveTimer||_ghDataSaveTimer)return;
+  const ok=await _loadDataFromGitHub();
+  if(!ok)return;
+  // Re-render the currently visible page with fresh data
+  updateCounts();
+  const renderers={dashboard:renderDashboard,analytics:renderAnalytics,jobs:renderJobs,
+    candidates:renderCandidates,pipeline:renderPipeline,'int-schedule':renderIntSchedule,
+    'int-log':renderIntLog,selections:renderSelections,auditlog:renderAuditLog,'recycle-bin':renderRecycleBin};
+  if(renderers[_currentPage])renderers[_currentPage]();
+}
+function _startAutoSync(){
+  if(_syncIntervalId)clearInterval(_syncIntervalId);
+  _syncIntervalId=setInterval(_autoSyncFromGitHub,90000); // pull every 90 seconds
+}
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
   const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
@@ -1051,6 +1071,7 @@ async function reconnectLastFile(){
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════
 function showPage(name){
+  _currentPage=name;
   if(name==='auditlog')renderAuditLog();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
@@ -1061,7 +1082,7 @@ function showPage(name){
   document.getElementById('page-title').textContent=titles[name]||name;
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload from GitHub</button>';
-  if(_loggedInUser?.role==='admin'&&(localStorage.getItem('hrp_gh_token')||'').trim())
+  if(_getWriteToken())
     ta.innerHTML+='<button class="btn btn-sm" style="background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;font-weight:600" onclick="_pushDataToGitHub()" title="Push your current data to GitHub so all devices see it">📤 Sync Data</button>';
   if(name==='jobs')         ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openJobModal()">+ Add Job</button>';
   if(name==='candidates'){ta.innerHTML+='<button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📤 Bulk Upload</button>';ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openCandModal()">+ Add Candidate</button>';}
@@ -2323,13 +2344,20 @@ function _saveUsers(){
   _pushUsersToGitHub(); // async, fire-and-forget; no-op if no token configured
 }
 // ── GitHub-backed user sync (automatic cross-device) ──────────────────────
+// _sharedWriteToken: loaded from hrp_users.json at startup, shared automatically with all users
+let _sharedWriteToken='';
+function _getWriteToken(){return(localStorage.getItem('hrp_gh_token')||'').trim()||_sharedWriteToken;}
 async function _syncUsersFromGitHub(){
   // Public read — no auth needed
+  // hrp_users.json format: {users:[...], wt:"shared_write_token"} OR legacy plain array
   try{
     const r=await fetch(GITHUB_USERS_RAW+'?_='+Date.now());
     if(!r.ok)return;
-    const ghUsers=await r.json();
-    if(!Array.isArray(ghUsers)||!ghUsers.length)return;
+    const raw=await r.json();
+    // Handle both formats: plain array (legacy) and {users,wt} object
+    const ghUsers=Array.isArray(raw)?raw:(raw.users||[]);
+    _sharedWriteToken=(raw.wt||''); // extract shared write token (empty string if not set)
+    if(!ghUsers.length)return;
     // GitHub is authoritative; keep any local-only users not yet pushed
     const ghNames=new Set(ghUsers.map(u=>u.username.toLowerCase()));
     const localOnly=users.filter(u=>!ghNames.has(u.username.toLowerCase()));
@@ -2339,16 +2367,17 @@ async function _syncUsersFromGitHub(){
 }
 async function _pushUsersToGitHub(){
   const token=(localStorage.getItem('hrp_gh_token')||'').trim();
-  if(!token)return; // no token configured — skip silently
+  if(!token)return; // only admin (with personal token) can update users + shared token
   try{
-    // Need current file SHA for updates
     const metaResp=await fetch(GITHUB_USERS_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
     const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(users,null,2))));
+    // Embed write token in the file so all users get it automatically
+    const payload={users,wt:token};
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2))));
     const body={message:'chore: sync user list',content};
     if(sha)body.sha=sha;
     const resp=await fetch(GITHUB_USERS_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(resp.ok||resp.status===201){showMsg('✓ Users synced to GitHub');}
+    if(resp.ok||resp.status===201){_sharedWriteToken=token;showMsg('✓ Users & sync token saved to GitHub — all users will now auto-sync data');}
     else{const err=await resp.json().catch(()=>({}));showErr('GitHub sync failed: '+(err.message||resp.status)+'. Check your token in Manage Users.');}
   }catch(e){showErr('GitHub sync error: '+e.message);}
 }
@@ -2358,18 +2387,24 @@ function saveGHToken(){
   localStorage.setItem('hrp_gh_token',t);
   document.getElementById('gh-token-input').value='';
   _updateGHTokenStatus();
-  showMsg('✓ Token saved. Syncing users to GitHub now…');
-  _pushUsersToGitHub();
+  showMsg('✓ Token saved. Pushing to GitHub so all users can sync…');
+  _pushUsersToGitHub(); // embeds token in hrp_users.json → all users get it on next load
 }
 function clearGHToken(){
   localStorage.removeItem('hrp_gh_token');
   _updateGHTokenStatus();
-  showMsg('GitHub token cleared. Users will no longer auto-sync.');
+  showMsg('GitHub token cleared.');
 }
 function _updateGHTokenStatus(){
   const tok=(localStorage.getItem('hrp_gh_token')||'').trim();
+  const shared=!!_sharedWriteToken;
   const el=document.getElementById('gh-token-status');
-  if(el){el.textContent=tok?'🟢 Syncing enabled':'🟡 No token — users not synced across devices';el.style.color=tok?'#059669':'#B45309';}
+  if(el){
+    if(tok)el.textContent='🟢 Admin token active';
+    else if(shared)el.textContent='🟢 Shared sync token active';
+    else el.textContent='🟡 No token — changes won\'t sync across devices';
+    el.style.color=(tok||shared)?'#059669':'#B45309';
+  }
 }
 // ── GitHub-backed HR data sync (automatic cross-device) ───────────────────
 let _ghDataSaveTimer=null;
@@ -2393,8 +2428,8 @@ async function _loadDataFromGitHub(){
   }catch(e){return false;}
 }
 async function _pushDataToGitHub(){
-  const token=(localStorage.getItem('hrp_gh_token')||'').trim();
-  if(!token)return; // no token — only localStorage save (single-device behaviour)
+  const token=_getWriteToken(); // personal token first, then shared token from hrp_users.json
+  if(!token)return; // no token available — only localStorage save (single-device behaviour)
   try{
     const metaResp=await fetch(GITHUB_DATA_JSON_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
     const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
@@ -2500,8 +2535,8 @@ async function doLogin(){
       document.getElementById('login-uname').value='';
       document.getElementById('login-pwd').value='';
       errEl.textContent='';
-      // Auto-load data from GitHub
-      loadFromGitHub();
+      // Auto-load data from GitHub, then start periodic sync so everyone sees live changes
+      loadFromGitHub().then(()=>_startAutoSync());
     }else{
       errEl.textContent='Invalid username or password.';
       document.getElementById('login-pwd').select();

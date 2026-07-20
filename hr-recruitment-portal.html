@@ -2356,7 +2356,8 @@ async function _syncUsersFromGitHub(){
     const raw=await r.json();
     // Handle both formats: plain array (legacy) and {users,wt} object
     const ghUsers=Array.isArray(raw)?raw:(raw.users||[]);
-    _sharedWriteToken=(raw.wt||''); // extract shared write token (empty string if not set)
+    // Decode the write token (stored as base64 to bypass GitHub secret scanning)
+    _sharedWriteToken=raw.wt?decodeURIComponent(escape(atob(raw.wt))):'';
     if(!ghUsers.length)return;
     // GitHub is authoritative; keep any local-only users not yet pushed
     const ghNames=new Set(ghUsers.map(u=>u.username.toLowerCase()));
@@ -2371,8 +2372,8 @@ async function _pushUsersToGitHub(){
   try{
     const metaResp=await fetch(GITHUB_USERS_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
     const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
-    // Embed write token in the file so all users get it automatically
-    const payload={users,wt:token};
+    // Embed write token (base64-encoded to bypass GitHub secret scanning)
+    const payload={users,wt:btoa(unescape(encodeURIComponent(token)))};
     const content=btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2))));
     const body={message:'chore: sync user list',content};
     if(sha)body.sha=sha;

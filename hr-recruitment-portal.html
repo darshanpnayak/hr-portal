@@ -935,13 +935,18 @@ async function loadFromGitHub(){
     fileName='HR-Recruitment-Data.xlsx';
     const wb=XLSX.read(buf,{type:'array',cellDates:false});
     parseWB(wb);
-    // try restore any unsaved local changes
+    // Restore local changes — localStorage is the most current copy on this device
     _lsLoad();
     document.getElementById('excel-filename').textContent='GitHub ✓';
     ps.classList.add('hidden');
     document.getElementById('sidebar').style.display='flex';
     document.getElementById('main').style.display='block';
     updateCounts();showPage('dashboard');
+    // Auto-push localStorage data to GitHub so all devices get the latest immediately
+    if((localStorage.getItem('hrp_gh_token')||'').trim()){
+      showMsg('↑ Pushing your local data to GitHub…');
+      setTimeout(()=>_pushDataToGitHub(),1500);
+    }
   }catch(e){
     spinner.textContent='⚠️';spinner.style.animation='none';
     title.textContent='Could not load data';
@@ -1056,6 +1061,8 @@ function showPage(name){
   document.getElementById('page-title').textContent=titles[name]||name;
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload from GitHub</button>';
+  if(_loggedInUser?.role==='admin'&&(localStorage.getItem('hrp_gh_token')||'').trim())
+    ta.innerHTML+='<button class="btn btn-sm" style="background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;font-weight:600" onclick="_pushDataToGitHub()" title="Push your current data to GitHub so all devices see it">📤 Sync Data</button>';
   if(name==='jobs')         ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openJobModal()">+ Add Job</button>';
   if(name==='candidates'){ta.innerHTML+='<button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📤 Bulk Upload</button>';ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openCandModal()">+ Add Candidate</button>';}
   if(name==='int-schedule') ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openISModal()">+ Schedule Interview</button>';

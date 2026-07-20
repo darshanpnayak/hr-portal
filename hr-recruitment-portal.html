@@ -994,7 +994,7 @@ async function _autoSyncFromGitHub(){
 }
 function _startAutoSync(){
   if(_syncIntervalId)clearInterval(_syncIntervalId);
-  _syncIntervalId=setInterval(_autoSyncFromGitHub,90000); // pull every 90 seconds
+  _syncIntervalId=setInterval(_autoSyncFromGitHub,15000); // pull every 15 seconds
 }
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
@@ -2415,14 +2415,27 @@ function _updateGHTokenStatus(){
 let _ghDataSaveTimer=null;
 function _scheduleGHDataSave(){
   clearTimeout(_ghDataSaveTimer);
-  _ghDataSaveTimer=setTimeout(()=>{_pushDataToGitHub();},8000); // 8s debounce
+  _ghDataSaveTimer=setTimeout(()=>{_pushDataToGitHub();},3000); // 8s debounce
 }
 async function _loadDataFromGitHub(){
-  // Public read — no auth needed; returns true if data was applied
+  // Use GitHub API (authenticated) when token available — no CDN cache, always fresh.
+  // Fall back to raw URL (5-min CDN cache) when no token yet.
   try{
-    const r=await fetch(GITHUB_DATA_JSON_RAW+'?_='+Date.now());
-    if(!r.ok)return false;
-    const d=await r.json();
+    let d;
+    const token=_getWriteToken();
+    if(token){
+      // API response: {sha, content (base64), encoding}
+      const r=await fetch(GITHUB_DATA_JSON_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
+      if(!r.ok)return false;
+      const meta=await r.json();
+      if(!meta.content)return false;
+      d=JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\n/g,'')))));
+    }else{
+      // No token yet (first load before users.json is read) — use raw URL
+      const r=await fetch(GITHUB_DATA_JSON_RAW+'?_='+Date.now());
+      if(!r.ok)return false;
+      d=await r.json();
+    }
     if(!d||!Array.isArray(d.jobs))return false;
     jobs=d.jobs||[];candidates=d.candidates||[];intSchedule=d.intSchedule||[];
     intLog=d.intLog||[];selections=d.selections||[];auditLog=d.auditLog||[];

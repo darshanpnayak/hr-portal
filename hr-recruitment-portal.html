@@ -517,11 +517,9 @@ window.addEventListener('load', function(){
         <table>
           <thead><tr>
             <th style="width:150px">Timestamp</th>
-            <th style="width:100px">User</th>
-            <th style="width:90px">Action</th>
-            <th style="width:110px">Entity</th>
-            <th style="width:60px">ID</th>
-            <th>Summary</th>
+            <th style="width:90px">By</th>
+            <th style="width:160px">What Happened</th>
+            <th>Details</th>
             <th id="al-del-col" style="width:50px;display:none"></th>
           </tr></thead>
           <tbody id="audit-tbody"></tbody>
@@ -878,9 +876,9 @@ function _diffFields(before, after, fields){
   fields.forEach(([key,label])=>{
     const bv=String(before[key]||'').trim();
     const av=String(after[key]||'').trim();
-    if(bv!==av) changes.push(`${label}: "${bv}"→"${av}"`);
+    if(bv!==av) changes.push(`${label}: ${bv||'(empty)'} → ${av||'(empty)'}`);
   });
-  return changes.length?changes.join(' | '):'(no changes)';
+  return changes.length?changes.join(' • '):'No changes detected';
 }
 
 // ─── Audit logger ───
@@ -1309,12 +1307,17 @@ function saveCandidate(){
     Object.assign(existing,data);
     existing.modifiedBy=_currentUser||'—';existing.modifiedAt=now;
     savedCand=existing;
-    const cdiff=_diffFields(cbefore,data,[['name','Name'],['email','Email'],['phone','Phone'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
+    // Resolve jobId → job title for readable diff
+    const _jt=id=>{const j=jobs.find(j=>j.id===+id);return j?`${j.title}${j.client?' @ '+j.client:''}`:`Job #${id}`;};
+    const cbefore_r={...cbefore,jobId:_jt(cbefore.jobId)};
+    const cdata_r={...data,jobId:_jt(data.jobId)};
+    const cdiff=_diffFields(cbefore_r,cdata_r,[['name','Name'],['email','Email'],['phone','Phone'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
     logAudit('Modified','Candidate',editCId,`${name} — ${cdiff}`);
   }else{
     const nc={id:nextCId++,...data,appliedDate:today(),createdBy:_currentUser||'—',createdAt:now,modifiedBy:'',modifiedAt:''};
     candidates.push(nc);savedCand=nc;
-    logAudit('Created','Candidate',nc.id,`${name} applied for job #${jobId} (stage: ${newStage})`);
+    const _jname=jobs.find(j=>j.id===+jobId);
+    logAudit('Created','Candidate',nc.id,`${name} applied for ${_jname?`"${_jname.title}" @ ${_jname.client||'—'}`:`Job #${jobId}`} (starting stage: ${newStage})`);
   }
   closeModal('cand-modal');renderCandidates();updateCounts();scheduleSave();
   // Auto-create selection + job close check when stage is set to Hired
@@ -2265,17 +2268,24 @@ function renderAuditLog(){
   const rows=[...auditLog].reverse().filter(a=>
     (!ef||a.entity===ef)&&(!af||a.action===af)&&(!uf||a.user===uf)
   );
-  const actionStyle={Created:'background:#D1FAE5;color:#065F46',Modified:'background:#DBEAFE;color:#1E40AF',Deleted:'background:#FEE2E2;color:#991B1B'};
-  const colspan=isAdmin?7:6;
+  const _icon={Created:'➕',Modified:'✏️',Deleted:'🗑️',Restored:'♻️'};
+  const _verb={Created:'Added',Modified:'Updated',Deleted:'Removed',Restored:'Restored'};
+  const _badgeBg={Created:'#D1FAE5',Modified:'#DBEAFE',Deleted:'#FEE2E2',Restored:'#FEF3C7'};
+  const _badgeClr={Created:'#065F46',Modified:'#1E40AF',Deleted:'#991B1B',Restored:'#92400E'};
+  // Prettify summary: replace pipe separators with line breaks, strip double-quotes
+  const _fmt=s=>s.replace(/ \| /g,'<br>').replace(/ • /g,'<br>').replace(/"/g,'');
+  const colspan=isAdmin?5:4;
   document.getElementById('audit-tbody').innerHTML=rows.length
     ?rows.map(a=>`<tr>
-      <td style="font-size:11px;color:var(--gray-400);white-space:nowrap">${a.timestamp}</td>
-      <td><strong style="font-size:12px">${a.user}</strong></td>
-      <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;${actionStyle[a.action]||''}">${a.action}</span></td>
-      <td style="font-size:12px;color:var(--gray-600)">${a.entity}</td>
-      <td style="font-size:11px;color:var(--gray-400);text-align:center">${a.recordId}</td>
-      <td style="font-size:12px;color:var(--gray-700)">${a.summary}</td>
-      ${isAdmin?`<td><button class="btn btn-icon btn-sm" style="color:var(--danger)" onclick="deleteAuditEntry(${a.id})" title="Delete this entry">🗑</button></td>`:''}
+      <td style="font-size:11px;color:var(--gray-400);white-space:nowrap;vertical-align:top;padding-top:10px">${a.timestamp}</td>
+      <td style="vertical-align:top;padding-top:10px"><strong style="font-size:12px">${a.user}</strong></td>
+      <td style="vertical-align:top;padding-top:8px">
+        <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${_badgeBg[a.action]||'#F3F4F6'};color:${_badgeClr[a.action]||'#374151'}">
+          ${_icon[a.action]||'•'} ${a.entity} ${_verb[a.action]||a.action}
+        </span>
+      </td>
+      <td style="font-size:12px;color:var(--gray-700);line-height:1.8">${_fmt(a.summary)}</td>
+      ${isAdmin?`<td style="vertical-align:top;padding-top:6px"><button class="btn btn-icon btn-sm" style="color:var(--danger)" onclick="deleteAuditEntry(${a.id})" title="Delete this entry">🗑</button></td>`:''}
     </tr>`).join('')
     :`<tr><td colspan="${colspan}" class="empty-state">No audit entries found</td></tr>`;
 }

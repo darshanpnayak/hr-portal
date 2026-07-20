@@ -901,6 +901,8 @@ function buildWB(){
 }
 // ── GitHub data source ──────────────────────────────────────
 const GITHUB_DATA_URL='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/HR-Recruitment-Data.xlsx';
+const GITHUB_USERS_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_users.json';
+const GITHUB_USERS_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_users.json';
 
 async function loadFromGitHub(){
   // Show loading screen
@@ -2295,8 +2297,60 @@ function resetAuth(){
     setTimeout(()=>{if(link){link.dataset.confirm='';link.textContent="Can't log in? Reset credentials";link.style.color='';}},5000);
   }
 }
-function _saveUsers(){try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}}
-// ── Multi-device user sync via setup code ──────────────────────────────────
+function _saveUsers(){
+  try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}
+  _pushUsersToGitHub(); // async, fire-and-forget; no-op if no token configured
+}
+// ── GitHub-backed user sync (automatic cross-device) ──────────────────────
+async function _syncUsersFromGitHub(){
+  // Public read — no auth needed
+  try{
+    const r=await fetch(GITHUB_USERS_RAW+'?_='+Date.now());
+    if(!r.ok)return;
+    const ghUsers=await r.json();
+    if(!Array.isArray(ghUsers)||!ghUsers.length)return;
+    // GitHub is authoritative; keep any local-only users not yet pushed
+    const ghNames=new Set(ghUsers.map(u=>u.username.toLowerCase()));
+    const localOnly=users.filter(u=>!ghNames.has(u.username.toLowerCase()));
+    users=[...ghUsers,...localOnly];
+    try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}
+  }catch(e){}
+}
+async function _pushUsersToGitHub(){
+  const token=(localStorage.getItem('hrp_gh_token')||'').trim();
+  if(!token)return; // no token configured — skip silently
+  try{
+    // Need current file SHA for updates
+    const metaResp=await fetch(GITHUB_USERS_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
+    const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(users,null,2))));
+    const body={message:'chore: sync user list',content};
+    if(sha)body.sha=sha;
+    const resp=await fetch(GITHUB_USERS_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(resp.ok||resp.status===201){showMsg('✓ Users synced to GitHub');}
+    else{const err=await resp.json().catch(()=>({}));showErr('GitHub sync failed: '+(err.message||resp.status)+'. Check your token in Manage Users.');}
+  }catch(e){showErr('GitHub sync error: '+e.message);}
+}
+function saveGHToken(){
+  const t=(document.getElementById('gh-token-input').value||'').trim();
+  if(!t){showErr('Please enter a Personal Access Token.');return;}
+  localStorage.setItem('hrp_gh_token',t);
+  document.getElementById('gh-token-input').value='';
+  _updateGHTokenStatus();
+  showMsg('✓ Token saved. Syncing users to GitHub now…');
+  _pushUsersToGitHub();
+}
+function clearGHToken(){
+  localStorage.removeItem('hrp_gh_token');
+  _updateGHTokenStatus();
+  showMsg('GitHub token cleared. Users will no longer auto-sync.');
+}
+function _updateGHTokenStatus(){
+  const tok=(localStorage.getItem('hrp_gh_token')||'').trim();
+  const el=document.getElementById('gh-token-status');
+  if(el){el.textContent=tok?'🟢 Syncing enabled':'🟡 No token — users not synced across devices';el.style.color=tok?'#059669':'#B45309';}
+}
+// ── Multi-device user sync via setup code (fallback) ──────────────────────
 function exportSetupCode(){
   if(_loggedInUser?.role!=='admin'){showErr('Only admins can export the setup code.');return;}
   if(!users.length){showErr('No users to export.');return;}
@@ -2413,6 +2467,8 @@ function doLogout(){
 function openUsersModal(){
   renderUsersList();
   fv('nu-uname','');fv('nu-pwd','');fv('nu-role','user');
+  fv('gh-token-input','');
+  _updateGHTokenStatus();
   openModal('users-modal');
 }
 function renderUsersList(){
@@ -2503,6 +2559,11 @@ window.addEventListener('DOMContentLoaded',async()=>{
     }
   });
   _loadUsers();
+  // Fetch latest users from GitHub so any device always has the current user list
+  const _lb=document.getElementById('login-btn');
+  if(_lb){_lb.textContent='Syncing…';_lb.disabled=true;}
+  await _syncUsersFromGitHub();
+  if(_lb){_lb.textContent='Sign In →';_lb.disabled=false;}
   await _ensureDefaultAdmin();
   // ── Auto-restore session across page refreshes ──
   if(!window._SANDBOX_MODE){
@@ -2532,6 +2593,22 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <div class="modal-header"><h2>👥 Manage Users</h2><button class="modal-close" onclick="closeModal('users-modal')">✕</button></div>
     <div class="modal-body">
       <div id="users-list"></div>
+      <div style="border-top:1px solid var(--gray-200);margin-top:18px;padding-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-weight:700;font-size:13px;color:var(--gray-700)">🔗 Auto-Sync to GitHub</div>
+          <span id="gh-token-status" style="font-size:11px;font-weight:600"></span>
+        </div>
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;line-height:1.5">Enter a GitHub Personal Access Token (PAT) with <strong>Contents: Read &amp; Write</strong> permission on the <code>hr-portal</code> repo. Once set, users created here will automatically be available on <em>all devices</em> — no export/import needed.</div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="flex:1"><input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px"></div>
+          <button class="btn btn-primary btn-sm" onclick="saveGHToken()">💾 Save</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearGHToken()">✕ Clear</button>
+          <button class="btn btn-secondary btn-sm" onclick="_pushUsersToGitHub()" title="Force sync now">↑ Sync</button>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--gray-400)">
+          Get a token: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → select <strong>darshanpnayak/hr-portal</strong> → Contents: Read &amp; Write.
+        </div>
+      </div>
       <div style="border-top:1px solid var(--gray-200);margin-top:18px;padding-top:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--gray-700)">➕ Add New User</div>
         <div class="form-grid">

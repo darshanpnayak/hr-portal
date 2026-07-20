@@ -903,6 +903,8 @@ function buildWB(){
 const GITHUB_DATA_URL='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/HR-Recruitment-Data.xlsx';
 const GITHUB_USERS_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_users.json';
 const GITHUB_USERS_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_users.json';
+const GITHUB_DATA_JSON_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_data.json';
+const GITHUB_DATA_JSON_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_data.json';
 
 async function loadFromGitHub(){
   // Show loading screen
@@ -915,6 +917,18 @@ async function loadFromGitHub(){
   msg.textContent='Fetching HR-Recruitment-Data.xlsx from GitHub…';
   title.textContent='Loading latest data…';
   try{
+    // ── Try hrp_data.json first — always up-to-date across devices ──
+    const jsonOk=await _loadDataFromGitHub();
+    if(jsonOk){
+      fileName='HR-Recruitment-Data.xlsx';
+      document.getElementById('excel-filename').textContent='GitHub ✓';
+      ps.classList.add('hidden');
+      document.getElementById('sidebar').style.display='flex';
+      document.getElementById('main').style.display='block';
+      updateCounts();showPage('dashboard');
+      return;
+    }
+    // ── Fall back to Excel (first-time or if JSON not yet created) ──
     const resp=await fetch(GITHUB_DATA_URL+'?_='+Date.now());
     if(!resp.ok)throw new Error('HTTP '+resp.status+' – file not found on GitHub');
     const buf=await resp.arrayBuffer();
@@ -956,7 +970,7 @@ async function loadWB(file){
   document.getElementById('main').style.display='block';
   updateCounts();showPage('dashboard');
 }
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);_scheduleGHDataSave();}
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
   const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
@@ -2349,6 +2363,41 @@ function _updateGHTokenStatus(){
   const tok=(localStorage.getItem('hrp_gh_token')||'').trim();
   const el=document.getElementById('gh-token-status');
   if(el){el.textContent=tok?'🟢 Syncing enabled':'🟡 No token — users not synced across devices';el.style.color=tok?'#059669':'#B45309';}
+}
+// ── GitHub-backed HR data sync (automatic cross-device) ───────────────────
+let _ghDataSaveTimer=null;
+function _scheduleGHDataSave(){
+  clearTimeout(_ghDataSaveTimer);
+  _ghDataSaveTimer=setTimeout(()=>{_pushDataToGitHub();},8000); // 8s debounce
+}
+async function _loadDataFromGitHub(){
+  // Public read — no auth needed; returns true if data was applied
+  try{
+    const r=await fetch(GITHUB_DATA_JSON_RAW+'?_='+Date.now());
+    if(!r.ok)return false;
+    const d=await r.json();
+    if(!d||!Array.isArray(d.jobs))return false;
+    jobs=d.jobs||[];candidates=d.candidates||[];intSchedule=d.intSchedule||[];
+    intLog=d.intLog||[];selections=d.selections||[];auditLog=d.auditLog||[];
+    deletedRecords=d.deletedRecords||[];
+    nextJId=d.nextJId||1;nextCId=d.nextCId||1;nextISId=d.nextISId||1;
+    nextLId=d.nextLId||1;nextSId=d.nextSId||1;nextAuditId=d.nextAuditId||1;nextDelId=d.nextDelId||1;
+    return true;
+  }catch(e){return false;}
+}
+async function _pushDataToGitHub(){
+  const token=(localStorage.getItem('hrp_gh_token')||'').trim();
+  if(!token)return; // no token — only localStorage save (single-device behaviour)
+  try{
+    const metaResp=await fetch(GITHUB_DATA_JSON_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
+    const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
+    const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+    const body={message:'chore: auto-save HR data',content};
+    if(sha)body.sha=sha;
+    const resp=await fetch(GITHUB_DATA_JSON_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(resp.ok||resp.status===201)showMsg('✓ Data synced to GitHub');
+  }catch(e){}
 }
 // ── Multi-device user sync via setup code (fallback) ──────────────────────
 function exportSetupCode(){

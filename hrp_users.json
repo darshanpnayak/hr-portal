@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "username": "admin",
+    "pwdHash": "2076ff1dd68667bb",
+    "role": "admin",
+    "createdAt": "18 Jul 2026, 09:21 pm"
+  },
+  {
+    "username": "Darshan",
+    "pwdHash": "26bca4a9bc0b2327",
+    "role": "user",
+    "createdAt": "18 Jul 2026, 09:27 pm"
+  },
+  {
+    "username": "Mamata",
+    "pwdHash": "7958d1cc01a6f913",
+    "role": "user",
+    "createdAt": "18 Jul 2026, 10:37 pm"
+  },
+  {
+    "username": "Aruna",
+    "pwdHash": "fea767204ed79d6a",
+    "role": "user",
+    "createdAt": "18 Jul 2026, 10:37 pm"
+  }
+]

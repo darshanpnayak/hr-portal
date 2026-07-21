@@ -1,1 +1,11 @@
-{"users":[],"wt":""}
+{
+  "users": [
+    {
+      "username": "admin",
+      "pwdHash": "2076ff1dd68667bb",
+      "role": "admin",
+      "createdAt": "21 Jul 2026, 05:00 pm"
+    }
+  ],
+  "wt": "LzskBwcWPhwmHTFYfCgnLyQHGwFfFDk4ByIuAT0cID0FLAcqJjshLAIic14MPgURDAoFJzoxXh0YK18sUB4QPyIfEwR5HjotJgEYIyU5XSB/XiYvQDIcAwxHLQY5"
+}

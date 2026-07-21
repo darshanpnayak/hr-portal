@@ -1154,7 +1154,7 @@ function renderDashboard(){
     <div class="stat-card sc-amber"><div class="sc-label">Final Selected</div><div class="sc-value">${finalSel}</div><div class="sc-sub">${selections.length} in selections · ${offerYet} offer pending</div></div>
     <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release</div></div>
     <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel} offer pending</div></div>
-    <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show / On Hold</div><div class="sc-value">${l1reject+l2reject+noShow+onHoldLog}</div><div class="sc-sub">${l1reject+l2reject} rejected · ${noShow} no show · ${onHoldLog} on hold</div></div>`;
+    <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show / On Hold</div><div class="sc-value">${csc('Rejected')+noShow+csc('On Hold')}</div><div class="sc-sub">${csc('Rejected')} rejected · ${noShow} no show · ${csc('On Hold')} on hold</div></div>`;
 
   // ── Candidate Pipeline (all stages) + Interview Log Status (all statuses)
   const cpStages=[

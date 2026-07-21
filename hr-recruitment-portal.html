@@ -1080,9 +1080,10 @@ function showPage(name){
     'int-schedule':'Interview Schedule','int-log':'Interview Log (L1/L2)','selections':'Selections',auditlog:'Audit Log','recycle-bin':'🗑 Recycle Bin'};
   document.getElementById('page-title').textContent=titles[name]||name;
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML='<button class="btn btn-secondary btn-sm" onclick="loadFromGitHub()" title="Reload latest data from GitHub">↻ Reload from GitHub</button>';
-  if(_getWriteToken())
-    ta.innerHTML+='<button class="btn btn-sm" style="background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;font-weight:600" onclick="_pushDataToGitHub()" title="Push your current data to GitHub so all devices see it">📤 Sync Data</button>';
+  ta.innerHTML='';
+  // Admin-only emergency override — auto-sync handles this for everyone in normal usage
+  if(_loggedInUser?.role==='admin'&&_getWriteToken())
+    ta.innerHTML='<button class="btn btn-sm" style="background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;font-weight:600" onclick="_pushDataToGitHub()" title="Force-push data to GitHub (emergency use — auto-sync handles this normally)">📤 Force Sync</button>';
   if(name==='jobs')         ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openJobModal()">+ Add Job</button>';
   if(name==='candidates'){ta.innerHTML+='<button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📤 Bulk Upload</button>';ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openCandModal()">+ Add Candidate</button>';}
   if(name==='int-schedule') ta.innerHTML+='<button class="btn btn-primary btn-sm" onclick="openISModal()">+ Schedule Interview</button>';

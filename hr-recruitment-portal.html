@@ -975,12 +975,13 @@ async function loadWB(file){
   updateCounts();showPage('dashboard');
 }
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{_lsSave();},600);_scheduleGHDataSave();}
-// ── Auto-sync: pull latest data from GitHub every 90s so all users see live changes ──
+// ── Auto-sync: pull latest data from GitHub every 5s so all users see live changes ──
+let _lastPushAt=0; // timestamp of last successful push
 async function _autoSyncFromGitHub(){
   // Skip if a modal is open (user may be mid-edit)
   if(document.querySelectorAll('.modal-overlay.open').length>0)return;
-  // Skip if a pending save is in flight (data will push to GitHub momentarily)
-  if(saveTimer||_ghDataSaveTimer)return;
+  // Skip only if we pushed data in the last 4 seconds (avoid reading our own stale commit)
+  if(Date.now()-_lastPushAt<4000)return;
   const ok=await _loadDataFromGitHub();
   if(!ok)return;
   // Re-render the currently visible page with fresh data
@@ -991,8 +992,8 @@ async function _autoSyncFromGitHub(){
   if(renderers[_currentPage])renderers[_currentPage]();
 }
 function _startAutoSync(){
-  if(_syncIntervalId)clearInterval(_syncIntervalId);
-  _syncIntervalId=setInterval(_autoSyncFromGitHub,15000); // pull every 15 seconds
+  if(_syncIntervalId)return; // already running — don't double-start
+  _syncIntervalId=setInterval(_autoSyncFromGitHub,5000); // pull every 5 seconds
 }
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
@@ -2425,7 +2426,7 @@ function _updateGHTokenStatus(){
 let _ghDataSaveTimer=null;
 function _scheduleGHDataSave(){
   clearTimeout(_ghDataSaveTimer);
-  _ghDataSaveTimer=setTimeout(()=>{_pushDataToGitHub();},3000); // 8s debounce
+  _ghDataSaveTimer=setTimeout(()=>{_pushDataToGitHub();},2000); // 8s debounce
 }
 async function _loadDataFromGitHub(){
   // Use GitHub API (authenticated) when token available — no CDN cache, always fresh.
@@ -2466,7 +2467,7 @@ async function _pushDataToGitHub(){
     const body={message:'chore: auto-save HR data',content};
     if(sha)body.sha=sha;
     const resp=await fetch(GITHUB_DATA_JSON_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(resp.ok||resp.status===201)showMsg('✓ Data synced to GitHub');
+    if(resp.ok||resp.status===201){_lastPushAt=Date.now();showMsg('✓ Data synced to GitHub');}
   }catch(e){}
 }
 // ── Multi-device user sync via setup code (fallback) ──────────────────────
@@ -2565,6 +2566,8 @@ async function doLogin(){
       errEl.textContent='';
       // Auto-load data from GitHub, then start periodic sync so everyone sees live changes
       loadFromGitHub().then(()=>_startAutoSync());
+      // Safety net: start sync after 8s regardless, in case .then() is swallowed by an internal catch
+      setTimeout(_startAutoSync, 8000);
     }else{
       errEl.textContent='Invalid username or password.';
       document.getElementById('login-pwd').select();

@@ -401,10 +401,11 @@ window.addEventListener('load', function(){
     <div class="filters">
       <input class="filter-input" type="text" id="cand-search" placeholder="Search candidates…" oninput="renderCandidates()" style="width:200px">
       <select class="filter-input" id="cand-stage-f" onchange="renderCandidates()"><option value="">All Stages</option><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
+      <select class="filter-input" id="cand-source-f" onchange="renderCandidates()"><option value="">All Sources</option><option>LinkedIn</option><option>Naukri</option><option>Indeed</option><option>Referral (Internal)</option><option>Consultant / Agency</option><option>Company Website</option><option>Job Fair / Campus</option><option>Walk-in</option><option>Other</option></select>
       <select class="filter-input" id="cand-job-f" onchange="renderCandidates()"><option value="">All Jobs</option></select>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Candidate</th><th>Applied For</th><th>Stage</th><th>Applied Date</th><th>Interviewers</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Candidate</th><th>Applied For</th><th>Source</th><th>Stage</th><th>Applied Date</th><th>Interviewers</th><th>Actions</th></tr></thead>
       <tbody id="cands-tbody"></tbody>
     </table></div>
   </div>
@@ -562,6 +563,7 @@ window.addEventListener('load', function(){
       <div class="form-group"><label>Email *</label><input id="cf-email"></div>
       <div class="form-group"><label>Phone</label><input id="cf-phone"></div>
       <div class="form-group"><label>LinkedIn</label><input id="cf-linkedin"></div>
+      <div class="form-group"><label>Source *</label><select id="cf-source"><option value="">— Select source —</option><option>LinkedIn</option><option>Naukri</option><option>Indeed</option><option>Referral (Internal)</option><option>Consultant / Agency</option><option>Company Website</option><option>Job Fair / Campus</option><option>Walk-in</option><option>Other</option></select></div>
       <div class="form-group"><label>Applied For *</label><select id="cf-job"></select></div>
       <div class="form-group"><label>Stage</label>
         <select id="cf-stage"><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
@@ -774,7 +776,8 @@ window.addEventListener('load', function(){
 // ═══════════════════════════════════════════════════════════
 const HAS_FSA = 'showOpenFilePicker' in window;
 const JOB_HDR  = ['id','title','dept','location','hm','status','openDate','desc','client','positions','budget'];
-const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt'];
+const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt','source'];
+const CAND_SOURCES=['LinkedIn','Naukri','Indeed','Referral (Internal)','Consultant / Agency','Company Website','Job Fair / Campus','Walk-in','Other'];
 const INT_HDR  = ['id','candidateId','jobId','date','time','type','status','interviewers','notes','feedback'];
 const LOG_HDR  = ['id','client','candidateName','skill','availDate','time','l1Status','update','finalStatus'];
 const SEL_HDR  = ['id','client','status','candidateName','skill','phone','offerCTC','doj','comments','createdBy','createdAt','modifiedBy','modifiedAt'];
@@ -843,8 +846,8 @@ function normSel(raw){
 // ═══════════════════════════════════════════════════════════
 function rowToJob(r){return{id:+r[0]||0,title:r[1]||'',dept:r[2]||'',location:r[3]||'',hm:r[4]||'',status:r[5]||'Open',openDate:r[6]||'',desc:r[7]||'',client:r[8]||'',positions:Math.max(1,+r[9]||1),budget:r[10]||''};}
 function jobToRow(j){return[j.id,j.title,j.dept,j.location,j.hm,j.status,j.openDate,j.desc,j.client||'',j.positions||1,j.budget||''];}
-function rowToCand(r){return{id:+r[0]||0,name:r[1]||'',email:r[2]||'',phone:r[3]||'',linkedin:r[4]||'',jobId:+r[5]||0,stage:r[6]||'Applied',appliedDate:r[7]||'',notes:r[8]||'',createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||''};}
-function candToRow(c){return[c.id,c.name,c.email,c.phone,c.linkedin||'',c.jobId,c.stage,c.appliedDate,c.notes||'',c.createdBy||'',c.createdAt||'',c.modifiedBy||'',c.modifiedAt||''];}
+function rowToCand(r){return{id:+r[0]||0,name:r[1]||'',email:r[2]||'',phone:r[3]||'',linkedin:r[4]||'',jobId:+r[5]||0,stage:r[6]||'Applied',appliedDate:r[7]||'',notes:r[8]||'',createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||'',source:r[13]||''};}
+function candToRow(c){return[c.id,c.name,c.email,c.phone,c.linkedin||'',c.jobId,c.stage,c.appliedDate,c.notes||'',c.createdBy||'',c.createdAt||'',c.modifiedBy||'',c.modifiedAt||'',c.source||''];}
 function rowToIS(r){let fb=[];try{fb=JSON.parse(r[9]||'[]');}catch(e){}return{id:+r[0]||0,candidateId:+r[1]||0,jobId:+r[2]||0,date:r[3]||'',time:r[4]||'',type:r[5]||'',status:r[6]||'Scheduled',interviewers:(r[7]||'').split(',').map(s=>s.trim()).filter(Boolean),notes:r[8]||'',feedback:fb};}
 function isToRow(i){return[i.id,i.candidateId,i.jobId,i.date,i.time,i.type,i.status,i.interviewers.join(','),i.notes||'',JSON.stringify(i.feedback||[])];}
 function rowToLog(r){return{id:+r[0]||0,client:String(r[1]||'').trim(),candidateName:String(r[2]||'').trim(),skill:String(r[3]||'').trim(),availDate:r[4]||'',time:r[5]||'',l1Status:normL1(String(r[6]||'')),update:String(r[7]||'').trim(),finalStatus:String(r[8]||'').trim()};}
@@ -1266,18 +1269,25 @@ function deleteJob(id){
 // ═══════════════════════════════════════════════════════════
 // CANDIDATES
 // ═══════════════════════════════════════════════════════════
+// Source icon map for quick visual identification
+const _srcIcon={'LinkedIn':'🔵','Naukri':'🟠','Indeed':'🟢','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Company Website':'🌐','Job Fair / Campus':'🎓','Walk-in':'🚶','Other':'📌'};
 function renderCandidates(){
-  const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),jf=gv('cand-job-f');
+  const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),srcf=gv('cand-source-f'),jf=gv('cand-job-f');
   const cur=document.getElementById('cand-job-f').value;
   document.getElementById('cand-job-f').innerHTML='<option value="">All Jobs</option>'+jobs.map(j=>`<option value="${j.id}"${j.id==cur?' selected':''}>${j.title}</option>`).join('');
-  const f=candidates.filter(c=>(!s||(c.name+c.email).toLowerCase().includes(s))&&(!sf||c.stage===sf)&&(!jf||c.jobId==jf)).sort((a,b)=>new Date(b.appliedDate)-new Date(a.appliedDate));
+  const f=candidates.filter(c=>
+    (!s||(c.name+c.email).toLowerCase().includes(s))&&
+    (!sf||c.stage===sf)&&(!srcf||c.source===srcf)&&(!jf||c.jobId==jf)
+  ).sort((a,b)=>new Date(b.appliedDate)-new Date(a.appliedDate));
   document.getElementById('cands-tbody').innerHTML=f.map(c=>{
     const job=getJob(c.jobId);
     const ivs=[...new Set(intSchedule.filter(i=>i.candidateId===c.id).flatMap(i=>i.interviewers))].slice(0,2).join(', ');
+    const srcBadge=c.source?`<div class="td-sub">${_srcIcon[c.source]||'📌'} ${c.source}</div>`:'<div class="td-sub" style="color:#EF4444">⚠ No source</div>';
     return`<tr><td><div style="display:flex;align-items:center;gap:9px">
       <div class="avatar" style="background:${avColor(c.name)};width:34px;height:34px;font-size:12px">${initials(c.name)}</div>
       <div><div class="td-name">${c.name}</div><div class="td-sub">${c.email}</div></div></div></td>
     <td><div style="font-size:13px">${job?.title||'—'}</div><div class="td-sub">${job?.dept||''}</div></td>
+    <td>${srcBadge}</td>
     <td><span class="badge b-${stageC(c.stage)}">${c.stage}</span></td>
     <td>${fmtDate(c.appliedDate)}</td>
     <td style="font-size:12px;color:var(--gray-500)">${ivs||'—'}</td>
@@ -1286,7 +1296,7 @@ function renderCandidates(){
       <button class="btn btn-icon btn-sm" onclick="openCandModal(${c.id})">✏️</button>
       <button class="btn btn-icon btn-sm" onclick="deleteCand(${c.id})">🗑</button>
     </div></td></tr>`;
-  }).join('')||'<tr><td colspan="6" class="empty-state">No candidates found</td></tr>';
+  }).join('')||'<tr><td colspan="7" class="empty-state">No candidates found</td></tr>';
 }
 function openCandModal(id){
   editCId=id||null;sv('cand-modal-title',id?'Edit Candidate':'Add Candidate');
@@ -1294,13 +1304,14 @@ function openCandModal(id){
   const currentJobId=id?getCand(id)?.jobId:null;
   const visibleJobs=jobs.filter(j=>j.status!=='Closed'||(currentJobId&&j.id===currentJobId));
   document.getElementById('cf-job').innerHTML=visibleJobs.map(j=>`<option value="${j.id}">${j.title}${j.status==='Closed'?' [Closed]':j.status==='On Hold'?' [On Hold]':''}</option>`).join('')||'<option value="">— No open jobs —</option>';
-  if(id){const c=getCand(id);fv('cf-name',c.name);fv('cf-email',c.email);fv('cf-phone',c.phone);fv('cf-linkedin',c.linkedin||'');fv('cf-job',c.jobId);fv('cf-stage',c.stage);fv('cf-notes',c.notes);}
-  else{['cf-name','cf-email','cf-phone','cf-linkedin','cf-notes'].forEach(x=>fv(x,''));fv('cf-stage','Applied');}
+  if(id){const c=getCand(id);fv('cf-name',c.name);fv('cf-email',c.email);fv('cf-phone',c.phone);fv('cf-linkedin',c.linkedin||'');fv('cf-source',c.source||'');fv('cf-job',c.jobId);fv('cf-stage',c.stage);fv('cf-notes',c.notes);}
+  else{['cf-name','cf-email','cf-phone','cf-linkedin','cf-notes'].forEach(x=>fv(x,''));fv('cf-source','');fv('cf-stage','Applied');}
   openModal('cand-modal');
 }
 function saveCandidate(){
-  const name=gv('cf-name'),email=gv('cf-email'),jobId=+gv('cf-job');
+  const name=gv('cf-name'),email=gv('cf-email'),jobId=+gv('cf-job'),source=gv('cf-source');
   if(!name||!email){showErr('Name and email required.');return;}
+  if(!source){showErr('Source is required — please select where this candidate was sourced from.');return;}
   // Block adding a new candidate to a Closed job
   if(!editCId){const selJob=getJob(jobId);if(selJob&&selJob.status==='Closed'){showErr(`Job "${selJob.title}" is Closed — cannot add candidates. Reopen the job first.`);return;}}
   // Enforce unique candidate names — only block on CREATE; warn on EDIT
@@ -1313,7 +1324,7 @@ function saveCandidate(){
     showErr('Cannot change status — this candidate has a scheduled interview with no feedback. Please submit the interview feedback first.');
     return;
   }
-  const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),jobId,stage:newStage,notes:gv('cf-notes')};
+  const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),source,jobId,stage:newStage,notes:gv('cf-notes')};
   const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   let savedCand;
   if(editCId){
@@ -1326,7 +1337,7 @@ function saveCandidate(){
     const _jt=id=>{const j=jobs.find(j=>j.id===+id);return j?`${j.title}${j.client?' @ '+j.client:''}`:`Job #${id}`;};
     const cbefore_r={...cbefore,jobId:_jt(cbefore.jobId)};
     const cdata_r={...data,jobId:_jt(data.jobId)};
-    const cdiff=_diffFields(cbefore_r,cdata_r,[['name','Name'],['email','Email'],['phone','Phone'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
+    const cdiff=_diffFields(cbefore_r,cdata_r,[['name','Name'],['email','Email'],['phone','Phone'],['source','Source'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
     logAudit('Modified','Candidate',editCId,`${name} — ${cdiff}`);
   }else{
     const nc={id:nextCId++,...data,appliedDate:today(),createdBy:_currentUser||'—',createdAt:now,modifiedBy:'',modifiedAt:''};

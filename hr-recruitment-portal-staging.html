@@ -402,7 +402,7 @@ window.addEventListener('load', function(){
     <div class="filters">
       <input class="filter-input" type="text" id="cand-search" placeholder="Search candidates…" oninput="renderCandidates()" style="width:200px">
       <select class="filter-input" id="cand-stage-f" onchange="renderCandidates()"><option value="">All Stages</option><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
-      <select class="filter-input" id="cand-source-f" onchange="_toggleAgencyFilter();renderCandidates()"><option value="">All Sources</option><optgroup label="Job Portals"><option>LinkedIn</option><option>Naukri</option><option>Indeed</option></optgroup><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select>
+      <select class="filter-input" id="cand-source-f" onchange="_toggleAgencyFilter();renderCandidates()"><option value="">All Sources</option><option>Job Portals</option><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select>
       <input class="filter-input" type="text" id="cand-agency-f" placeholder="Filter by agency…" oninput="renderCandidates()" style="display:none;width:160px">
       <select class="filter-input" id="cand-job-f" onchange="renderCandidates()"><option value="">All Jobs</option></select>
     </div>
@@ -565,7 +565,7 @@ window.addEventListener('load', function(){
       <div class="form-group"><label>Email *</label><input id="cf-email"></div>
       <div class="form-group"><label>Phone</label><input id="cf-phone"></div>
       <div class="form-group"><label>LinkedIn</label><input id="cf-linkedin"></div>
-      <div class="form-group"><label>Source *</label><select id="cf-source" onchange="_toggleSourceFields()"><option value="">— Select source —</option><optgroup label="Job Portals"><option>LinkedIn</option><option>Naukri</option><option>Indeed</option></optgroup><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select></div>
+      <div class="form-group"><label>Source *</label><select id="cf-source" onchange="_toggleSourceFields()"><option value="">— Select source —</option><option>Job Portals</option><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select></div>
       <div class="form-group" id="cf-referredby-wrap" style="display:none"><label>Referred By *</label><input id="cf-referredby" placeholder="e.g. John Smith (Engineering)"></div>
       <div class="form-group" id="cf-agency-wrap" style="display:none"><label>Agency Name *</label><input id="cf-agency" placeholder="e.g. ABC Staffing Solutions"></div>
       <div class="form-group" id="cf-other-wrap" style="display:none"><label>Please specify *</label><input id="cf-other" placeholder="Describe how this candidate was sourced"></div>
@@ -782,7 +782,7 @@ window.addEventListener('load', function(){
 const HAS_FSA = 'showOpenFilePicker' in window;
 const JOB_HDR  = ['id','title','dept','location','hm','status','openDate','desc','client','positions','budget'];
 const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt','source','agencyName','referredBy','otherSource'];
-const CAND_SOURCES=['LinkedIn','Naukri','Indeed','Referral','Consultant / Agency','Other'];
+const CAND_SOURCES=['Job Portals','Referral','Consultant / Agency','Other'];
 const INT_HDR  = ['id','candidateId','jobId','date','time','type','status','interviewers','notes','feedback'];
 const LOG_HDR  = ['id','client','candidateName','skill','availDate','time','l1Status','update','finalStatus'];
 const SEL_HDR  = ['id','client','status','candidateName','skill','phone','offerCTC','doj','comments','createdBy','createdAt','modifiedBy','modifiedAt'];
@@ -1275,7 +1275,7 @@ function deleteJob(id){
 // CANDIDATES
 // ═══════════════════════════════════════════════════════════
 // Source icon map for quick visual identification
-const _srcIcon={'LinkedIn':'🔵','Naukri':'🟠','Indeed':'🟢','Referral':'🤝','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Other':'📌'};
+const _srcIcon={'Job Portals':'🌐','Referral':'🤝','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Other':'📌'};
 function renderCandidates(){
   const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),srcf=gv('cand-source-f'),agf=(gv('cand-agency-f')||'').toLowerCase(),jf=gv('cand-job-f');
   const cur=document.getElementById('cand-job-f').value;

@@ -401,7 +401,7 @@ window.addEventListener('load', function(){
     <div class="filters">
       <input class="filter-input" type="text" id="cand-search" placeholder="Search candidates…" oninput="renderCandidates()" style="width:200px">
       <select class="filter-input" id="cand-stage-f" onchange="renderCandidates()"><option value="">All Stages</option><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
-      <select class="filter-input" id="cand-source-f" onchange="_toggleAgencyFilter();renderCandidates()"><option value="">All Sources</option><option>LinkedIn</option><option>Naukri</option><option>Indeed</option><option>Referral (Internal)</option><option>Consultant / Agency</option><option>Company Website</option><option>Job Fair / Campus</option><option>Walk-in</option><option>Other</option></select>
+      <select class="filter-input" id="cand-source-f" onchange="_toggleAgencyFilter();renderCandidates()"><option value="">All Sources</option><optgroup label="Social Media"><option>LinkedIn</option><option>Naukri</option><option>Indeed</option></optgroup><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select>
       <input class="filter-input" type="text" id="cand-agency-f" placeholder="Filter by agency…" oninput="renderCandidates()" style="display:none;width:160px">
       <select class="filter-input" id="cand-job-f" onchange="renderCandidates()"><option value="">All Jobs</option></select>
     </div>
@@ -564,8 +564,10 @@ window.addEventListener('load', function(){
       <div class="form-group"><label>Email *</label><input id="cf-email"></div>
       <div class="form-group"><label>Phone</label><input id="cf-phone"></div>
       <div class="form-group"><label>LinkedIn</label><input id="cf-linkedin"></div>
-      <div class="form-group"><label>Source *</label><select id="cf-source" onchange="_toggleAgencyField()"><option value="">— Select source —</option><option>LinkedIn</option><option>Naukri</option><option>Indeed</option><option>Referral (Internal)</option><option>Consultant / Agency</option><option>Company Website</option><option>Job Fair / Campus</option><option>Walk-in</option><option>Other</option></select></div>
+      <div class="form-group"><label>Source *</label><select id="cf-source" onchange="_toggleSourceFields()"><option value="">— Select source —</option><optgroup label="Social Media"><option>LinkedIn</option><option>Naukri</option><option>Indeed</option></optgroup><option>Referral</option><option>Consultant / Agency</option><option>Other</option></select></div>
+      <div class="form-group" id="cf-referredby-wrap" style="display:none"><label>Referred By *</label><input id="cf-referredby" placeholder="e.g. John Smith (Engineering)"></div>
       <div class="form-group" id="cf-agency-wrap" style="display:none"><label>Agency Name *</label><input id="cf-agency" placeholder="e.g. ABC Staffing Solutions"></div>
+      <div class="form-group" id="cf-other-wrap" style="display:none"><label>Please specify *</label><input id="cf-other" placeholder="Describe how this candidate was sourced"></div>
       <div class="form-group"><label>Applied For *</label><select id="cf-job"></select></div>
       <div class="form-group"><label>Stage</label>
         <select id="cf-stage"><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option><option>On Hold</option></select>
@@ -778,8 +780,8 @@ window.addEventListener('load', function(){
 // ═══════════════════════════════════════════════════════════
 const HAS_FSA = 'showOpenFilePicker' in window;
 const JOB_HDR  = ['id','title','dept','location','hm','status','openDate','desc','client','positions','budget'];
-const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt','source','agencyName'];
-const CAND_SOURCES=['LinkedIn','Naukri','Indeed','Referral (Internal)','Consultant / Agency','Company Website','Job Fair / Campus','Walk-in','Other'];
+const CAND_HDR = ['id','name','email','phone','linkedin','jobId','stage','appliedDate','notes','createdBy','createdAt','modifiedBy','modifiedAt','source','agencyName','referredBy','otherSource'];
+const CAND_SOURCES=['LinkedIn','Naukri','Indeed','Referral','Consultant / Agency','Other'];
 const INT_HDR  = ['id','candidateId','jobId','date','time','type','status','interviewers','notes','feedback'];
 const LOG_HDR  = ['id','client','candidateName','skill','availDate','time','l1Status','update','finalStatus'];
 const SEL_HDR  = ['id','client','status','candidateName','skill','phone','offerCTC','doj','comments','createdBy','createdAt','modifiedBy','modifiedAt'];
@@ -848,8 +850,8 @@ function normSel(raw){
 // ═══════════════════════════════════════════════════════════
 function rowToJob(r){return{id:+r[0]||0,title:r[1]||'',dept:r[2]||'',location:r[3]||'',hm:r[4]||'',status:r[5]||'Open',openDate:r[6]||'',desc:r[7]||'',client:r[8]||'',positions:Math.max(1,+r[9]||1),budget:r[10]||''};}
 function jobToRow(j){return[j.id,j.title,j.dept,j.location,j.hm,j.status,j.openDate,j.desc,j.client||'',j.positions||1,j.budget||''];}
-function rowToCand(r){return{id:+r[0]||0,name:r[1]||'',email:r[2]||'',phone:r[3]||'',linkedin:r[4]||'',jobId:+r[5]||0,stage:r[6]||'Applied',appliedDate:r[7]||'',notes:r[8]||'',createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||'',source:r[13]||'',agencyName:r[14]||''};}
-function candToRow(c){return[c.id,c.name,c.email,c.phone,c.linkedin||'',c.jobId,c.stage,c.appliedDate,c.notes||'',c.createdBy||'',c.createdAt||'',c.modifiedBy||'',c.modifiedAt||'',c.source||'',c.agencyName||''];}
+function rowToCand(r){return{id:+r[0]||0,name:r[1]||'',email:r[2]||'',phone:r[3]||'',linkedin:r[4]||'',jobId:+r[5]||0,stage:r[6]||'Applied',appliedDate:r[7]||'',notes:r[8]||'',createdBy:String(r[9]||'').trim(),createdAt:r[10]||'',modifiedBy:String(r[11]||'').trim(),modifiedAt:r[12]||'',source:r[13]||'',agencyName:r[14]||'',referredBy:r[15]||'',otherSource:r[16]||''};}
+function candToRow(c){return[c.id,c.name,c.email,c.phone,c.linkedin||'',c.jobId,c.stage,c.appliedDate,c.notes||'',c.createdBy||'',c.createdAt||'',c.modifiedBy||'',c.modifiedAt||'',c.source||'',c.agencyName||'',c.referredBy||'',c.otherSource||''];}
 function rowToIS(r){let fb=[];try{fb=JSON.parse(r[9]||'[]');}catch(e){}return{id:+r[0]||0,candidateId:+r[1]||0,jobId:+r[2]||0,date:r[3]||'',time:r[4]||'',type:r[5]||'',status:r[6]||'Scheduled',interviewers:(r[7]||'').split(',').map(s=>s.trim()).filter(Boolean),notes:r[8]||'',feedback:fb};}
 function isToRow(i){return[i.id,i.candidateId,i.jobId,i.date,i.time,i.type,i.status,i.interviewers.join(','),i.notes||'',JSON.stringify(i.feedback||[])];}
 function rowToLog(r){return{id:+r[0]||0,client:String(r[1]||'').trim(),candidateName:String(r[2]||'').trim(),skill:String(r[3]||'').trim(),availDate:r[4]||'',time:r[5]||'',l1Status:normL1(String(r[6]||'')),update:String(r[7]||'').trim(),finalStatus:String(r[8]||'').trim()};}
@@ -1272,7 +1274,7 @@ function deleteJob(id){
 // CANDIDATES
 // ═══════════════════════════════════════════════════════════
 // Source icon map for quick visual identification
-const _srcIcon={'LinkedIn':'🔵','Naukri':'🟠','Indeed':'🟢','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Company Website':'🌐','Job Fair / Campus':'🎓','Walk-in':'🚶','Other':'📌'};
+const _srcIcon={'LinkedIn':'🔵','Naukri':'🟠','Indeed':'🟢','Referral':'🤝','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Other':'📌'};
 function renderCandidates(){
   const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),srcf=gv('cand-source-f'),agf=(gv('cand-agency-f')||'').toLowerCase(),jf=gv('cand-job-f');
   const cur=document.getElementById('cand-job-f').value;
@@ -1284,7 +1286,8 @@ function renderCandidates(){
   document.getElementById('cands-tbody').innerHTML=f.map(c=>{
     const job=getJob(c.jobId);
     const ivs=[...new Set(intSchedule.filter(i=>i.candidateId===c.id).flatMap(i=>i.interviewers))].slice(0,2).join(', ');
-    const srcBadge=c.source?`<div class="td-sub">${_srcIcon[c.source]||'📌'} ${c.source}${c.source==='Consultant / Agency'&&c.agencyName?`<br><span style="font-size:11px;color:var(--gray-500);padding-left:2px">🏷 ${c.agencyName}</span>`:''}</div>`:'<div class="td-sub" style="color:#EF4444">⚠ No source</div>';
+    const _srcSub=c.source==='Consultant / Agency'&&c.agencyName?`🏷 ${c.agencyName}`:c.source==='Referral'&&c.referredBy?`👤 ${c.referredBy}`:c.source==='Other'&&c.otherSource?`📝 ${c.otherSource}`:'';
+    const srcBadge=c.source?`<div class="td-sub">${_srcIcon[c.source]||'📌'} ${c.source}${_srcSub?`<br><span style="font-size:11px;color:var(--gray-500);padding-left:2px">${_srcSub}</span>`:''}</div>`:'<div class="td-sub" style="color:#EF4444">⚠ No source</div>';
     return`<tr><td><div style="display:flex;align-items:center;gap:9px">
       <div class="avatar" style="background:${avColor(c.name)};width:34px;height:34px;font-size:12px">${initials(c.name)}</div>
       <div><div class="td-name">${c.name}</div><div class="td-sub">${c.email}</div></div></div></td>
@@ -1300,11 +1303,13 @@ function renderCandidates(){
     </div></td></tr>`;
   }).join('')||'<tr><td colspan="7" class="empty-state">No candidates found</td></tr>';
 }
-function _toggleAgencyField(){
-  const isAgency=gv('cf-source')==='Consultant / Agency';
-  const wrap=document.getElementById('cf-agency-wrap');
-  if(wrap)wrap.style.display=isAgency?'':'none';
-  if(!isAgency&&document.getElementById('cf-agency'))document.getElementById('cf-agency').value='';
+function _toggleAgencyField(){_toggleSourceFields();}// backward compat alias
+function _toggleSourceFields(){
+  const src=gv('cf-source');
+  const show=(id,yes)=>{const el=document.getElementById(id);if(el){el.style.display=yes?'':'none';if(!yes){const inp=el.querySelector('input');if(inp)inp.value='';}}}
+  show('cf-referredby-wrap', src==='Referral');
+  show('cf-agency-wrap',     src==='Consultant / Agency');
+  show('cf-other-wrap',      src==='Other');
 }
 function _toggleAgencyFilter(){
   const isAgency=gv('cand-source-f')==='Consultant / Agency';
@@ -1317,16 +1322,18 @@ function openCandModal(id){
   const currentJobId=id?getCand(id)?.jobId:null;
   const visibleJobs=jobs.filter(j=>j.status!=='Closed'||(currentJobId&&j.id===currentJobId));
   document.getElementById('cf-job').innerHTML=visibleJobs.map(j=>`<option value="${j.id}">${j.title}${j.status==='Closed'?' [Closed]':j.status==='On Hold'?' [On Hold]':''}</option>`).join('')||'<option value="">— No open jobs —</option>';
-  if(id){const c=getCand(id);fv('cf-name',c.name);fv('cf-email',c.email);fv('cf-phone',c.phone);fv('cf-linkedin',c.linkedin||'');fv('cf-source',c.source||'');fv('cf-agency',c.agencyName||'');fv('cf-job',c.jobId);fv('cf-stage',c.stage);fv('cf-notes',c.notes);}
-  else{['cf-name','cf-email','cf-phone','cf-linkedin','cf-notes','cf-agency'].forEach(x=>fv(x,''));fv('cf-source','');fv('cf-stage','Applied');}
-  _toggleAgencyField();
+  if(id){const c=getCand(id);fv('cf-name',c.name);fv('cf-email',c.email);fv('cf-phone',c.phone);fv('cf-linkedin',c.linkedin||'');fv('cf-source',c.source||'');fv('cf-agency',c.agencyName||'');fv('cf-referredby',c.referredBy||'');fv('cf-other',c.otherSource||'');fv('cf-job',c.jobId);fv('cf-stage',c.stage);fv('cf-notes',c.notes);}
+  else{['cf-name','cf-email','cf-phone','cf-linkedin','cf-notes','cf-agency','cf-referredby','cf-other'].forEach(x=>fv(x,''));fv('cf-source','');fv('cf-stage','Applied');}
+  _toggleSourceFields();
   openModal('cand-modal');
 }
 function saveCandidate(){
-  const name=gv('cf-name'),email=gv('cf-email'),jobId=+gv('cf-job'),source=gv('cf-source'),agencyName=gv('cf-agency').trim();
+  const name=gv('cf-name'),email=gv('cf-email'),jobId=+gv('cf-job'),source=gv('cf-source'),agencyName=gv('cf-agency').trim(),referredBy=gv('cf-referredby').trim(),otherSource=gv('cf-other').trim();
   if(!name||!email){showErr('Name and email required.');return;}
   if(!source){showErr('Source is required — please select where this candidate was sourced from.');return;}
   if(source==='Consultant / Agency'&&!agencyName){showErr('Agency Name is required when source is Consultant / Agency.');return;}
+  if(source==='Referral'&&!referredBy){showErr('Please enter who referred this candidate.');return;}
+  if(source==='Other'&&!otherSource){showErr('Please specify the source for this candidate.');return;}
   // Block adding a new candidate to a Closed job
   if(!editCId){const selJob=getJob(jobId);if(selJob&&selJob.status==='Closed'){showErr(`Job "${selJob.title}" is Closed — cannot add candidates. Reopen the job first.`);return;}}
   // Enforce unique candidate names — only block on CREATE; warn on EDIT
@@ -1339,7 +1346,7 @@ function saveCandidate(){
     showErr('Cannot change status — this candidate has a scheduled interview with no feedback. Please submit the interview feedback first.');
     return;
   }
-  const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),source,agencyName:source==='Consultant / Agency'?agencyName:'',jobId,stage:newStage,notes:gv('cf-notes')};
+  const data={name,email,phone:gv('cf-phone'),linkedin:gv('cf-linkedin'),source,agencyName:source==='Consultant / Agency'?agencyName:'',referredBy:source==='Referral'?referredBy:'',otherSource:source==='Other'?otherSource:'',jobId,stage:newStage,notes:gv('cf-notes')};
   const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   let savedCand;
   if(editCId){
@@ -1352,7 +1359,7 @@ function saveCandidate(){
     const _jt=id=>{const j=jobs.find(j=>j.id===+id);return j?`${j.title}${j.client?' @ '+j.client:''}`:`Job #${id}`;};
     const cbefore_r={...cbefore,jobId:_jt(cbefore.jobId)};
     const cdata_r={...data,jobId:_jt(data.jobId)};
-    const cdiff=_diffFields(cbefore_r,cdata_r,[['name','Name'],['email','Email'],['phone','Phone'],['source','Source'],['agencyName','Agency'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
+    const cdiff=_diffFields(cbefore_r,cdata_r,[['name','Name'],['email','Email'],['phone','Phone'],['source','Source'],['agencyName','Agency'],['referredBy','Referred By'],['otherSource','Other Source'],['stage','Stage'],['jobId','Job'],['notes','Notes']]);
     logAudit('Modified','Candidate',editCId,`${name} — ${cdiff}`);
   }else{
     const nc={id:nextCId++,...data,appliedDate:today(),createdBy:_currentUser||'—',createdAt:now,modifiedBy:'',modifiedAt:''};
@@ -1754,6 +1761,9 @@ function submitFeedback(){
     if(rec==='reject'&&cand.stage!=='Rejected'){cand.stage='Rejected';renderPipeline();}
     else if(rec==='hold'&&!['On Hold','Rejected'].includes(cand.stage)){cand.stage='On Hold';renderPipeline();}
   }
+  // Audit log entry for feedback submission
+  const _fbCand=getCand(i.candidateId);const _fbJob=getJob(i.jobId);
+  logAudit('Modified','Interview',i.id,`Feedback submitted for ${_fbCand?.name||'candidate'} | Round: ${i.type} | By: ${name} | Rating: ${gv('fb-rating')}/5 | Recommendation: ${rec}${newStatus?' | Status → '+newStatus:''}`);
   document.getElementById('fb-form').style.display='none';
   renderFbList(i);renderStageButtons(getCand(i.candidateId),i);
   // Show next-round scheduling buttons when proceed on L1/L2

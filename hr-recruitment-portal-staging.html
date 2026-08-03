@@ -2203,8 +2203,12 @@ function renderManagement(){
   if(!el)return;
 
   // ── Date helpers ──────────────────────────────────────────
-  const todayStr=new Date().toISOString().slice(0,10);
+  const todayStr=localYMD(); // local date, not UTC
   const nowMs=Date.now();
+  // Parse any date string (YYYY-MM-DD or locale variants) to a Date at local midnight
+  const parseDate=s=>{if(!s)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(s))return new Date(s+'T00:00');const d=new Date(s);return isNaN(d)?null:d;};
+  // True if dateStr falls within [from, to] (all YYYY-MM-DD strings)
+  const inPeriod=(dateStr,from,to)=>{const d=parseDate(dateStr);const f=parseDate(from);const t=parseDate(to);return d&&f&&t&&d>=f&&d<=t;};
   const daysBetween=(a,b)=>{
     if(!a||!b)return null;
     const d=Math.floor((new Date(b)-new Date(a))/(86400000));
@@ -2214,17 +2218,19 @@ function renderManagement(){
   const _fmtD=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
 
   // ── Resolve period fromStr / toStr ────────────────────────
+  // Use local-date arithmetic so IST users get the correct calendar day
+  const _daysAgo=n=>{const d=new Date();d.setDate(d.getDate()-n);return localYMD(d);};
   let fromStr,toStr,periodLabel;
   if(_mgmtFilter.mode==='week'){
-    fromStr=new Date(nowMs-7*86400000).toISOString().slice(0,10);
+    fromStr=_daysAgo(7);
     toStr=todayStr;
     periodLabel=`Last 7 days (${_fmtD(fromStr)} – ${_fmtD(toStr)})`;
   } else if(_mgmtFilter.mode==='month'){
-    fromStr=new Date(nowMs-30*86400000).toISOString().slice(0,10);
+    fromStr=_daysAgo(30);
     toStr=todayStr;
     periodLabel=`Last 30 days (${_fmtD(fromStr)} – ${_fmtD(toStr)})`;
   } else {
-    fromStr=_mgmtFilter.from||new Date(nowMs-7*86400000).toISOString().slice(0,10);
+    fromStr=_mgmtFilter.from||_daysAgo(7);
     toStr=_mgmtFilter.to||todayStr;
     periodLabel=`${_fmtD(fromStr)} – ${_fmtD(toStr)}`;
   }
@@ -2249,16 +2255,16 @@ function renderManagement(){
   // ── Core datasets ─────────────────────────────────────────
   const openJobs=jobs.filter(j=>j.status==='Open');
   const activeCands=candidates.filter(c=>!['Hired','Rejected'].includes(c.stage));
-  const periodCands=candidates.filter(c=>c.appliedDate>=fromStr&&c.appliedDate<=toStr);
+  const periodCands=candidates.filter(c=>inPeriod(c.appliedDate,fromStr,toStr));
   const hiredCands=candidates.filter(c=>c.stage==='Hired');
 
   // Interviews in period
-  const periodInts=intSchedule.filter(i=>i.date>=fromStr&&i.date<=toStr);
+  const periodInts=intSchedule.filter(i=>inPeriod(i.date,fromStr,toStr));
   const pendingFb=intSchedule.filter(i=>i.status&&i.status.includes('Feedback Pending'));
 
   // Offers
   const offersExtended=candidates.filter(c=>['Offer','Hired'].includes(c.stage));
-  const offersInPeriod=selections.filter(s=>s.selectionDate>=fromStr&&s.selectionDate<=toStr);
+  const offersInPeriod=selections.filter(s=>inPeriod(s.selectionDate,fromStr,toStr));
 
   // ── Avg Time-to-Fill (Applied → Hired) ───────────────────
   const ttfVals=hiredCands.map(c=>{
@@ -2282,7 +2288,7 @@ function renderManagement(){
   // Open jobs + Closed jobs whose openDate falls within the selected period
   const trackerJobs=[
     ...openJobs,
-    ...jobs.filter(j=>j.status==='Closed'&&j.openDate&&j.openDate>=fromStr&&j.openDate<=toStr)
+    ...jobs.filter(j=>j.status==='Closed'&&inPeriod(j.openDate,fromStr,toStr))
   ];
   const posTracker=trackerJobs.map(j=>{
     const jCands=candidates.filter(c=>c.jobId===j.id);
@@ -2436,7 +2442,7 @@ function renderManagement(){
     </div>`:'<div style="color:#9CA3AF;text-align:center;padding:12px">No open positions</div>';
 
   // This week activity
-  const rejInPeriod=candidates.filter(c=>c.stage==='Rejected'&&c.modifiedAt>=fromStr&&c.modifiedAt<=toStr).length;
+  const rejInPeriod=candidates.filter(c=>c.stage==='Rejected'&&inPeriod(c.modifiedAt,fromStr,toStr)).length;
   const activityHtml=`
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
       ${[
@@ -2567,7 +2573,9 @@ const avColor=name=>{const c=['#D97706','#0891B2','#059669','#D97706','#DC2626',
 const initials=name=>(name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
 const fmtDate=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
 const fmtTime=t=>{if(!t||t==='00:00')return'—';const[h,m]=t.split(':').map(Number);const a=h>=12?'PM':'AM';return`${h%12||12}:${String(m).padStart(2,'0')} ${a}`;};
-const today=()=>new Date().toISOString().slice(0,10);
+// Returns YYYY-MM-DD in the user's LOCAL timezone (not UTC)
+const localYMD=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today=()=>localYMD();
 const gv=id=>document.getElementById(id)?.value||'';
 const fv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v!=null?v:'';};
 const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};

@@ -2262,14 +2262,18 @@ function renderManagement(){
   const periodInts=intSchedule.filter(i=>inPeriod(i.date,fromStr,toStr));
   const pendingFb=intSchedule.filter(i=>i.status&&i.status.includes('Feedback Pending'));
 
-  // Offers
+  // Offers / Selections
   const offersExtended=candidates.filter(c=>['Offer','Hired'].includes(c.stage));
-  const offersInPeriod=selections.filter(s=>inPeriod(s.selectionDate,fromStr,toStr));
+  // Selections created in period (createdAt is a locale string — inPeriod handles it via parseDate)
+  const offersInPeriod=selections.filter(s=>inPeriod(s.createdAt,fromStr,toStr));
+  // Joined in period: status=Joined AND (doj in period OR modifiedAt in period)
+  const joinedInPeriod=selections.filter(s=>s.status==='Joined'&&(inPeriod(s.doj,fromStr,toStr)||inPeriod(s.modifiedAt,fromStr,toStr)));
 
   // ── Avg Time-to-Fill (Applied → Hired) ───────────────────
   const ttfVals=hiredCands.map(c=>{
-    const sel=selections.find(s=>s.candidateId===c.id&&s.status==='Joined');
-    const endDate=sel?.joinDate||todayStr;
+    // Selection model uses candidateName (no candidateId); match by name
+    const sel=selections.find(s=>s.candidateName&&s.candidateName.trim().toLowerCase()===c.name.trim().toLowerCase()&&s.status==='Joined');
+    const endDate=sel?.doj||todayStr; // doj = date of joining
     return daysBetween(c.appliedDate,endDate);
   }).filter(v=>v!==null);
   const avgTtf=ttfVals.length?Math.round(ttfVals.reduce((a,b)=>a+b,0)/ttfVals.length):null;
@@ -2375,7 +2379,7 @@ function renderManagement(){
       ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#4F46E5')}
       ${kpiCard('Active Candidates',activeCands.length,`${periodCands.length} applied in period`,'#0891B2')}
       ${kpiCard('Interviews in Period',periodInts.length,`${pendingFb.length} feedback pending`,'#D97706')}
-      ${kpiCard('Offers Extended',offersExtended.length,`${offersInPeriod.length} selections in period`,'#10B981')}
+      ${kpiCard('Offers Extended',offersExtended.length,`${offersInPeriod.length} offers · ${joinedInPeriod.length} joined`,'#10B981')}
       ${kpiCard('Avg Time to Fill',avgTtf!==null?avgTtf+'d':'—',avgTtf!==null?'Applied → Hired':'No hires yet','#7C3AED')}
       ${kpiCard('Hired',hiredCands.length,`${totalApplied?Math.round(hiredCands.length/totalApplied*100):0}% conversion rate`,'#059669')}
     </div>`;
@@ -2449,7 +2453,8 @@ function renderManagement(){
         {label:'New Applications',val:periodCands.length,icon:'📥',c:'#3B82F6'},
         {label:'Interviews Scheduled',val:periodInts.length,icon:'📅',c:'#8B5CF6'},
         {label:'Feedback Pending',val:pendingFb.length,icon:'⏳',c:'#F59E0B'},
-        {label:'Selections Made',val:offersInPeriod.length,icon:'✅',c:'#10B981'},
+        {label:'Offers Released',val:offersInPeriod.length,icon:'📄',c:'#10B981'},
+        {label:'Joined in Period',val:joinedInPeriod.length,icon:'🎉',c:'#059669'},
         {label:'Rejections',val:rejInPeriod,icon:'❌',c:'#EF4444'},
         {label:'Aging Jobs (>30d)',val:agingJobs.length,icon:'⚠️',c:'#D97706'},
       ].map(a=>`<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px;display:flex;align-items:center;gap:12px">

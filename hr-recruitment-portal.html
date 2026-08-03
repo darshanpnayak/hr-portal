@@ -801,6 +801,7 @@ const AUDIT_HDR = ['id','timestamp','user','action','entity','recordId','summary
 let jobs=[], candidates=[], intSchedule=[], intLog=[], selections=[];
 let nextJId=1,nextCId=1,nextISId=1,nextLId=1,nextSId=1;
 let _currentPage='dashboard', _syncIntervalId=null;
+let _mgmtFilter={mode:'week',from:'',to:''}; // management dashboard period filter
 let editJId=null,editCId=null,editISId=null,editLId=null,editSId=null,activeFbId=null;
 let fileHandle=null,fileName='',saveTimer=null,activeIntTab='scheduled';
 // Pending-hire gate: tracks a hire in progress until CTC/DOJ is confirmed
@@ -2175,6 +2176,21 @@ function renderAnalytics(){
 }
 
 // ═══════════════════════════════════════════════════════════
+// MANAGEMENT DASHBOARD – filter helpers
+// ═══════════════════════════════════════════════════════════
+function _setMgmtMode(mode){
+  _mgmtFilter.mode=mode;
+  if(mode!=='custom'){_mgmtFilter.from='';_mgmtFilter.to='';}
+  renderManagement();
+}
+function _applyMgmtRange(){
+  const f=document.getElementById('mgmt-f-from'),t=document.getElementById('mgmt-f-to');
+  if(!f||!t||!f.value||!t.value){return;}
+  _mgmtFilter.from=f.value;_mgmtFilter.to=t.value;
+  renderManagement();
+}
+
+// ═══════════════════════════════════════════════════════════
 // MANAGEMENT DASHBOARD
 // ═══════════════════════════════════════════════════════════
 function renderManagement(){
@@ -2184,8 +2200,6 @@ function renderManagement(){
   // ── Date helpers ──────────────────────────────────────────
   const todayStr=new Date().toISOString().slice(0,10);
   const nowMs=Date.now();
-  const weekAgoMs=nowMs-7*86400000;
-  const weekAgoStr=new Date(weekAgoMs).toISOString().slice(0,10);
   const daysBetween=(a,b)=>{
     if(!a||!b)return null;
     const d=Math.floor((new Date(b)-new Date(a))/(86400000));
@@ -2194,19 +2208,52 @@ function renderManagement(){
   const daysAgo=d=>d?Math.floor((nowMs-new Date(d))/86400000):null;
   const _fmtD=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
 
+  // ── Resolve period fromStr / toStr ────────────────────────
+  let fromStr,toStr,periodLabel;
+  if(_mgmtFilter.mode==='week'){
+    fromStr=new Date(nowMs-7*86400000).toISOString().slice(0,10);
+    toStr=todayStr;
+    periodLabel=`Last 7 days (${_fmtD(fromStr)} – ${_fmtD(toStr)})`;
+  } else if(_mgmtFilter.mode==='month'){
+    fromStr=new Date(nowMs-30*86400000).toISOString().slice(0,10);
+    toStr=todayStr;
+    periodLabel=`Last 30 days (${_fmtD(fromStr)} – ${_fmtD(toStr)})`;
+  } else {
+    fromStr=_mgmtFilter.from||new Date(nowMs-7*86400000).toISOString().slice(0,10);
+    toStr=_mgmtFilter.to||todayStr;
+    periodLabel=`${_fmtD(fromStr)} – ${_fmtD(toStr)}`;
+  }
+
+  // ── Filter bar HTML ───────────────────────────────────────
+  const btnStyle=(active)=>`padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${active?'var(--primary)':'#D1D5DB'};background:${active?'var(--primary)':'#fff'};color:${active?'#fff':'#374151'}`;
+  const filterBar=`
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 0 16px">
+      <span style="font-size:12px;font-weight:600;color:#6B7280">Period:</span>
+      <button style="${btnStyle(_mgmtFilter.mode==='week')}" onclick="_setMgmtMode('week')">Weekly</button>
+      <button style="${btnStyle(_mgmtFilter.mode==='month')}" onclick="_setMgmtMode('month')">Monthly</button>
+      <button style="${btnStyle(_mgmtFilter.mode==='custom')}" onclick="_setMgmtMode('custom')">Custom Range</button>
+      ${_mgmtFilter.mode==='custom'?`
+        <input type="date" id="mgmt-f-from" value="${_mgmtFilter.from||fromStr}" style="padding:5px 8px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px">
+        <span style="font-size:12px;color:#6B7280">to</span>
+        <input type="date" id="mgmt-f-to" value="${_mgmtFilter.to||toStr}" style="padding:5px 8px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px">
+        <button style="${btnStyle(false)}" onclick="_applyMgmtRange()">Apply</button>
+      `:''}
+      <span style="font-size:11px;color:#9CA3AF;margin-left:4px">📅 ${periodLabel} &nbsp;·&nbsp; Refreshed ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>
+    </div>`;
+
   // ── Core datasets ─────────────────────────────────────────
   const openJobs=jobs.filter(j=>j.status==='Open');
   const activeCands=candidates.filter(c=>!['Hired','Rejected'].includes(c.stage));
-  const thisWeekCands=candidates.filter(c=>c.appliedDate>=weekAgoStr);
+  const periodCands=candidates.filter(c=>c.appliedDate>=fromStr&&c.appliedDate<=toStr);
   const hiredCands=candidates.filter(c=>c.stage==='Hired');
 
-  // Interviews this week
-  const thisWeekInts=intSchedule.filter(i=>i.date>=weekAgoStr&&i.date<=todayStr);
+  // Interviews in period
+  const periodInts=intSchedule.filter(i=>i.date>=fromStr&&i.date<=toStr);
   const pendingFb=intSchedule.filter(i=>i.status&&i.status.includes('Feedback Pending'));
 
   // Offers
   const offersExtended=candidates.filter(c=>['Offer','Hired'].includes(c.stage));
-  const offersThisWeek=selections.filter(s=>s.selectionDate>=weekAgoStr);
+  const offersInPeriod=selections.filter(s=>s.selectionDate>=fromStr&&s.selectionDate<=toStr);
 
   // ── Avg Time-to-Fill (Applied → Hired) ───────────────────
   const ttfVals=hiredCands.map(c=>{
@@ -2302,9 +2349,9 @@ function renderManagement(){
   const kpiRow=`
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px">
       ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#4F46E5')}
-      ${kpiCard('Active Candidates',activeCands.length,`${thisWeekCands.length} added this week`,'#0891B2')}
-      ${kpiCard('Interviews This Week',thisWeekInts.length,`${pendingFb.length} feedback pending`,'#D97706')}
-      ${kpiCard('Offers Extended',offersExtended.length,`${offersThisWeek.length} selections this week`,'#10B981')}
+      ${kpiCard('Active Candidates',activeCands.length,`${periodCands.length} applied in period`,'#0891B2')}
+      ${kpiCard('Interviews in Period',periodInts.length,`${pendingFb.length} feedback pending`,'#D97706')}
+      ${kpiCard('Offers Extended',offersExtended.length,`${offersInPeriod.length} selections in period`,'#10B981')}
       ${kpiCard('Avg Time to Fill',avgTtf!==null?avgTtf+'d':'—',avgTtf!==null?'Applied → Hired':'No hires yet','#7C3AED')}
       ${kpiCard('Hired',hiredCands.length,`${totalApplied?Math.round(hiredCands.length/totalApplied*100):0}% conversion rate`,'#059669')}
     </div>`;
@@ -2369,15 +2416,15 @@ function renderManagement(){
     </div>`:'<div style="color:#9CA3AF;text-align:center;padding:12px">No open positions</div>';
 
   // This week activity
-  const rejThisWeek=candidates.filter(c=>c.stage==='Rejected'&&c.modifiedAt>=weekAgoStr).length;
+  const rejInPeriod=candidates.filter(c=>c.stage==='Rejected'&&c.modifiedAt>=fromStr&&c.modifiedAt<=toStr).length;
   const activityHtml=`
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
       ${[
-        {label:'New Applications',val:thisWeekCands.length,icon:'📥',c:'#3B82F6'},
-        {label:'Interviews Scheduled',val:thisWeekInts.length,icon:'📅',c:'#8B5CF6'},
+        {label:'New Applications',val:periodCands.length,icon:'📥',c:'#3B82F6'},
+        {label:'Interviews Scheduled',val:periodInts.length,icon:'📅',c:'#8B5CF6'},
         {label:'Feedback Pending',val:pendingFb.length,icon:'⏳',c:'#F59E0B'},
-        {label:'Selections Made',val:offersThisWeek.length,icon:'✅',c:'#10B981'},
-        {label:'Rejections',val:rejThisWeek,icon:'❌',c:'#EF4444'},
+        {label:'Selections Made',val:offersInPeriod.length,icon:'✅',c:'#10B981'},
+        {label:'Rejections',val:rejInPeriod,icon:'❌',c:'#EF4444'},
         {label:'Aging Jobs (>30d)',val:agingJobs.length,icon:'⚠️',c:'#D97706'},
       ].map(a=>`<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px;display:flex;align-items:center;gap:12px">
         <span style="font-size:20px">${a.icon}</span>
@@ -2472,17 +2519,12 @@ function renderManagement(){
       </div>
     </div>`;
 
-  // Week label
-  const wkLabel=`Week of ${_fmtD(weekAgoStr)} – ${_fmtD(todayStr)}`;
-
   el.innerHTML=`
-    <div style="margin-bottom:6px">
-      <div style="font-size:12px;color:#6B7280;font-weight:600">📅 ${wkLabel} &nbsp;·&nbsp; Last refreshed ${new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
-    </div>
+    ${filterBar}
     ${kpiRow}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
       ${section('Hiring Funnel','🔽',funnelBars)}
-      ${section('This Week\'s Activity','📆',activityHtml)}
+      ${section('Period Activity','📆',activityHtml)}
     </div>
     ${section('Position Tracker — Open Roles','📋',tblHdr)}
     ${section('Pipeline by Department','🏢',deptHtml)}

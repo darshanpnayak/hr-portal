@@ -802,6 +802,7 @@ let jobs=[], candidates=[], intSchedule=[], intLog=[], selections=[];
 let nextJId=1,nextCId=1,nextISId=1,nextLId=1,nextSId=1;
 let _currentPage='dashboard', _syncIntervalId=null;
 let _mgmtFilter={mode:'week',from:'',to:''}; // management dashboard period filter
+let _filterCandJob=null; // pending job filter set from Jobs page click
 let editJId=null,editCId=null,editISId=null,editLId=null,editSId=null,activeFbId=null;
 let fileHandle=null,fileName='',saveTimer=null,activeIntTab='scheduled';
 // Pending-hire gate: tracks a hire in progress until CTC/DOJ is confirmed
@@ -1286,9 +1287,13 @@ function deleteJob(id){
 // Source icon map for quick visual identification
 const _srcIcon={'Job Portals':'🌐','Referral':'🤝','Referral (Internal)':'🤝','Consultant / Agency':'🏢','Other':'📌'};
 function renderCandidates(){
-  const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),srcf=gv('cand-source-f'),agf=(gv('cand-agency-f')||'').toLowerCase(),jf=gv('cand-job-f');
-  const cur=document.getElementById('cand-job-f').value;
+  const s=gv('cand-search').toLowerCase(),sf=gv('cand-stage-f'),srcf=gv('cand-source-f'),agf=(gv('cand-agency-f')||'').toLowerCase();
+  // Apply pending job filter (set by clicking count in Jobs page) or retain current dropdown value
+  const pendingJob=_filterCandJob;_filterCandJob=null;
+  const cur=pendingJob!=null?pendingJob:document.getElementById('cand-job-f').value;
   document.getElementById('cand-job-f').innerHTML='<option value="">All Jobs</option>'+jobs.map(j=>`<option value="${j.id}"${j.id==cur?' selected':''}>${j.title}</option>`).join('');
+  if(pendingJob!=null)fv('cand-job-f',pendingJob); // set after options are built
+  const jf=gv('cand-job-f');
   const f=candidates.filter(c=>
     (!s||(c.name+c.email).toLowerCase().includes(s))&&
     (!sf||c.stage===sf)&&(!srcf||c.source===srcf)&&(!agf||c.agencyName.toLowerCase().includes(agf))&&(!jf||c.jobId==jf)
@@ -2320,12 +2325,16 @@ function renderManagement(){
   rejCands.forEach(c=>{const k=c.source||'Unknown';rejBySource[k]=(rejBySource[k]||0)+1;});
 
   // ── Dept pipeline (open jobs only) ────────────────────────
+  const _deptStages=['Applied','Screening','Interview','Offer','Hired','On Hold','Rejected'];
+  const _stgColor={'Applied':'#3B82F6','Screening':'#F97316','Interview':'#8B5CF6','Offer':'#10B981','Hired':'#059669','On Hold':'#F59E0B','Rejected':'#EF4444'};
   const depts=[...new Set(openJobs.map(j=>j.dept).filter(Boolean))];
   const deptPipeline=depts.map(d=>{
     const openDjIds=openJobs.filter(j=>j.dept===d).map(j=>j.id);
     const openCount=openDjIds.length;
     const dc=candidates.filter(c=>openDjIds.includes(c.jobId));
-    return{dept:d,openCount,total:dc.length,active:dc.filter(c=>!['Hired','Rejected'].includes(c.stage)).length,hired:dc.filter(c=>c.stage==='Hired').length};
+    const stageCnts={};
+    _deptStages.forEach(st=>{stageCnts[st]=dc.filter(c=>c.stage===st).length;});
+    return{dept:d,openCount,total:dc.length,stageCnts};
   }).sort((a,b)=>b.total-a.total);
 
   // ── BUILD HTML ────────────────────────────────────────────
@@ -2403,16 +2412,18 @@ function renderManagement(){
     <tbody>${posRows}</tbody>
   </table>`;
 
-  // Dept Pipeline (open jobs only)
+  // Dept Pipeline (open jobs only) — all stages with count > 0
   const deptHtml=deptPipeline.length?`
     <div style="display:flex;flex-wrap:wrap;gap:10px">
-    ${deptPipeline.map(d=>`
-      <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:12px 16px;min-width:150px;flex:1">
+    ${deptPipeline.map(d=>{
+      const stageChips=Object.entries(d.stageCnts).filter(([,n])=>n>0).map(([st,n])=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:${_stgColor[st]}18;color:${_stgColor[st]};margin:2px 2px 0 0">${n} ${st}</span>`).join('');
+      return`<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:12px 16px;min-width:180px;flex:1">
         <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">${d.dept}</div>
-        <div style="font-size:11px;color:#4F46E5;font-weight:600;margin-bottom:4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
-        <div style="font-size:22px;font-weight:800;color:#111827;margin:4px 0">${d.total}</div>
-        <div style="font-size:11px;color:#6B7280">${d.active} active · ${d.hired} hired</div>
-      </div>`).join('')}
+        <div style="font-size:11px;color:#4F46E5;font-weight:600;margin:2px 0 4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
+        <div style="font-size:24px;font-weight:800;color:#111827;margin:2px 0 6px">${d.total} <span style="font-size:12px;font-weight:400;color:#9CA3AF">candidates</span></div>
+        <div style="line-height:1.8">${stageChips||'<span style="font-size:11px;color:#9CA3AF">No candidates yet</span>'}</div>
+      </div>`;
+    }).join('')}
     </div>`:'<div style="color:#9CA3AF;text-align:center;padding:12px">No open positions</div>';
 
   // This week activity
@@ -2553,7 +2564,7 @@ const fv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v!=null?v:
 const sv=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
 const openModal=id=>document.getElementById(id).classList.add('open');
 const closeModal=id=>document.getElementById(id).classList.remove('open');
-const filterCandsByJob=id=>{fv('cand-job-f',id);showPage('candidates');};
+const filterCandsByJob=id=>{_filterCandJob=id;showPage('candidates');};
 const viewJobPipeline=id=>{document.getElementById('pipeline-job-f').value=id;showPage('pipeline');};
 const stageC=s=>({Applied:'applied',Screening:'screening',Interview:'interview',Offer:'offer',Hired:'hired',Rejected:'rejected','On Hold':'on-hold'})[s]||'applied';
 const statusC=s=>({Open:'open','On Hold':'on-hold',Closed:'closed'})[s]||'open';

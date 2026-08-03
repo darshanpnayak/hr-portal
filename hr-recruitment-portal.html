@@ -2279,8 +2279,12 @@ function renderManagement(){
   const srcTotal=Object.values(srcMap).reduce((a,b)=>a+b,0)||1;
 
   // ── Position tracker ─────────────────────────────────────
-  // For each open job, compute pipeline metrics
-  const posTracker=openJobs.map(j=>{
+  // Open jobs + Closed jobs whose openDate falls within the selected period
+  const trackerJobs=[
+    ...openJobs,
+    ...jobs.filter(j=>j.status==='Closed'&&j.openDate&&j.openDate>=fromStr&&j.openDate<=toStr)
+  ];
+  const posTracker=trackerJobs.map(j=>{
     const jCands=candidates.filter(c=>c.jobId===j.id);
     const inInterview=jCands.filter(c=>c.stage==='Interview').length;
     const inOffer=jCands.filter(c=>c.stage==='Offer').length;
@@ -2289,11 +2293,16 @@ function renderManagement(){
     const daysOpen=daysAgo(j.openDate);
     const pct=Math.min(100,Math.round(hired/positions*100));
     let badge,badgeC;
-    if(daysOpen===null||daysOpen<=30){badge='On Track';badgeC='#059669';}
+    if(j.status==='Closed'){badge='Closed';badgeC='#6B7280';}
+    else if(daysOpen===null||daysOpen<=30){badge='On Track';badgeC='#059669';}
     else if(daysOpen<=60){badge='Delayed';badgeC='#D97706';}
     else{badge='At Risk';badgeC='#DC2626';}
-    return{j,jCands:jCands.length,inInterview,inOffer,hired,positions,daysOpen,pct,badge,badgeC};
-  }).sort((a,b)=>(b.daysOpen||0)-(a.daysOpen||0));
+    return{j,jCands:jCands.length,inInterview,inOffer,hired,positions,daysOpen,pct,badge,badgeC,isClosed:j.status==='Closed'};
+  }).sort((a,b)=>{
+    // Open jobs first (sorted by daysOpen desc), then closed jobs
+    if(a.isClosed!==b.isClosed)return a.isClosed?1:-1;
+    return(b.daysOpen||0)-(a.daysOpen||0);
+  });
 
   // ── Aging jobs (>30 days) ─────────────────────────────────
   const agingJobs=posTracker.filter(r=>r.daysOpen!==null&&r.daysOpen>30);
@@ -2403,7 +2412,7 @@ function renderManagement(){
       <td style="text-align:center;font-size:12px;color:#6B7280">${r.daysOpen!==null?r.daysOpen+'d':'—'}</td>
       <td><span style="padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${r.badgeC}20;color:${r.badgeC}">${r.badge}</span></td>
     </tr>`).join('')
-    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:20px">No open positions</td></tr>';
+    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:20px">No positions in this period</td></tr>';
 
   const tblHdr=`<table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="border-bottom:2px solid #E5E7EB">
@@ -2537,7 +2546,7 @@ function renderManagement(){
       ${section('Hiring Funnel','🔽',funnelBars)}
       ${section('Period Activity','📆',activityHtml)}
     </div>
-    ${section('Position Tracker — Open Roles','📋',tblHdr)}
+    ${section('Position Tracker — All Roles','📋',tblHdr)}
     ${section('Pipeline by Department','🏢',deptHtml)}
     ${section('Hiring Velocity & Pipeline Health','⏱',velHtml)}
     ${section('Candidate Source Mix','🌐',srcHtml)}

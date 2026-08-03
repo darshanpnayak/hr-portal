@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>⚠️ HR Portal — STAGING</title>
+<title>HR Recruitment Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --primary:#D97706;--primary-light:#FFFBEB;--primary-dark:#B45309;
+  --primary:#D97706;--primary-light:#EEF2FF;--primary-dark:#3730A3;
   --success:#10B981;--success-light:#ECFDF5;
   --warning:#F59E0B;--warning-light:#FFFBEB;
   --danger:#EF4444;--danger-light:#FEF2F2;
@@ -241,11 +241,11 @@ window.addEventListener('load', function(){
 </head>
 <body>
 <!-- LOGIN GATE -->
-<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%);display:flex;align-items:center;justify-content:center">
+<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#D97706 0%,#7C3AED 100%);display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:18px;padding:40px 36px;width:360px;box-shadow:0 24px 60px rgba(0,0,0,.25)">
     <div style="text-align:center;margin-bottom:26px">
       <div style="font-size:40px;margin-bottom:8px">🔐</div>
-      <div style="font-size:20px;font-weight:800;color:#1F2937;margin-bottom:4px">⚠️ HR Portal — STAGING</div>
+      <div style="font-size:20px;font-weight:800;color:#1F2937;margin-bottom:4px">HR Recruitment Portal</div>
       <div style="font-size:13px;color:#6B7280">Sign in with your credentials</div>
     </div>
     <div style="margin-bottom:14px">
@@ -259,7 +259,7 @@ window.addEventListener('load', function(){
         style="width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none">
     </div>
     <div id="login-error" style="color:#DC2626;font-size:12px;margin-bottom:10px;min-height:16px;text-align:center"></div>
-    <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
+    <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#D97706,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
     <a href="#" id="login-reset-link" style="display:none"></a>
     <div style="text-align:center;margin-top:14px">
       <a href="#" onclick="toggleSetupPanel(event)" style="font-size:12px;color:#9CA3AF;text-decoration:none">🔑 First time on this device? Setup from Code</a>
@@ -267,7 +267,7 @@ window.addEventListener('load', function(){
     <div id="setup-code-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #E5E7EB">
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Paste Setup Code from admin:</label>
       <textarea id="setup-code-input" rows="3" placeholder="Paste the code shared by your admin…" style="width:100%;padding:8px 12px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:11px;box-sizing:border-box;font-family:monospace;resize:vertical"></textarea>
-      <button onclick="applySetupCode()" style="width:100%;margin-top:8px;padding:9px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Apply & Sync Users</button>
+      <button onclick="applySetupCode()" style="width:100%;margin-top:8px;padding:9px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Apply & Sync Users</button>
       <div id="setup-code-msg" style="font-size:12px;text-align:center;margin-top:7px;min-height:16px"></div>
     </div>
   </div>
@@ -275,11 +275,11 @@ window.addEventListener('load', function(){
 
 
 <!-- LOADING SCREEN (auto-loads data from GitHub) -->
-<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#D97706;color:#fff;text-align:center;font-size:13px;font-weight:700;padding:6px;letter-spacing:.05em">⚠️ STAGING ENVIRONMENT — Data is isolated from production</div><div id="picker-screen">
+<div id="picker-screen">
   <div class="picker-card" style="max-width:420px">
     <div class="picker-top">
       <div class="picker-logo">👥</div>
-      <h1>⚠️ HR Portal — STAGING</h1>
+      <h1>HR Recruitment Portal</h1>
       <p id="gh-load-title">Fetching latest data…</p>
     </div>
     <div class="picker-body" style="text-align:center;padding:36px 24px">
@@ -919,10 +919,10 @@ function buildWB(){
 }
 // ── GitHub data source ──────────────────────────────────────
 const GITHUB_DATA_URL='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/HR-Recruitment-Data.xlsx';
-const GITHUB_USERS_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_users_staging.json';
-const GITHUB_USERS_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_users_staging.json';
-const GITHUB_DATA_JSON_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_data_staging.json';
-const GITHUB_DATA_JSON_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_data_staging.json';
+const GITHUB_USERS_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_users.json';
+const GITHUB_USERS_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_users.json';
+const GITHUB_DATA_JSON_RAW='https://raw.githubusercontent.com/darshanpnayak/hr-portal/main/hrp_data.json';
+const GITHUB_DATA_JSON_API='https://api.github.com/repos/darshanpnayak/hr-portal/contents/hrp_data.json';
 
 async function loadFromGitHub(){
   // Show loading screen
@@ -935,7 +935,7 @@ async function loadFromGitHub(){
   msg.textContent='Fetching HR-Recruitment-Data.xlsx from GitHub…';
   title.textContent='Loading latest data…';
   try{
-    // ── Try hrp_data_staging.json first — always up-to-date across devices ──
+    // ── Try hrp_data.json first — always up-to-date across devices ──
     const jsonOk=await _loadDataFromGitHub();
     if(jsonOk){
       fileName='HR-Recruitment-Data.xlsx';
@@ -1017,11 +1017,11 @@ function _startAutoSync(){
 // ── localStorage helpers for SharePoint/CDN-blocked environments ──
 function _lsSave(){
   const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
-  try{localStorage.setItem('hrp_data_stg',JSON.stringify(d));return true;}catch(e){return false;}
+  try{localStorage.setItem('hrp_data',JSON.stringify(d));return true;}catch(e){return false;}
 }
 function _lsLoad(){
   try{
-    const raw=localStorage.getItem('hrp_data_stg');if(!raw)return false;
+    const raw=localStorage.getItem('hrp_data');if(!raw)return false;
     const d=JSON.parse(raw);
     jobs=d.jobs||[];candidates=d.candidates||[];intSchedule=d.intSchedule||[];
     intLog=d.intLog||[];selections=d.selections||[];auditLog=d.auditLog||[];
@@ -2164,7 +2164,7 @@ function renderAnalytics(){
 
   killC('dept');
   const depts=[...new Set(jobs.map(j=>j.dept))];
-  _charts.dept=new Chart(document.getElementById('chart-dept'),{type:'doughnut',data:{labels:depts,datasets:[{data:depts.map(d=>candidates.filter(c=>jobs.filter(j=>j.dept===d).map(j=>j.id).includes(c.jobId)).length),backgroundColor:['#4F46E5','#0891B2','#D97706','#DC2626','#059669','#7C3AED','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+  _charts.dept=new Chart(document.getElementById('chart-dept'),{type:'doughnut',data:{labels:depts,datasets:[{data:depts.map(d=>candidates.filter(c=>jobs.filter(j=>j.dept===d).map(j=>j.id).includes(c.jobId)).length),backgroundColor:['#D97706','#0891B2','#D97706','#DC2626','#059669','#7C3AED','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
 
   killC('logstatus');
   const lsc={};intLog.forEach(l=>{const st=l.l1Status||'Unknown';lsc[st]=(lsc[st]||0)+1;});
@@ -2279,8 +2279,12 @@ function renderManagement(){
   const srcTotal=Object.values(srcMap).reduce((a,b)=>a+b,0)||1;
 
   // ── Position tracker ─────────────────────────────────────
-  // For each open job, compute pipeline metrics
-  const posTracker=openJobs.map(j=>{
+  // Open jobs + Closed jobs whose openDate falls within the selected period
+  const trackerJobs=[
+    ...openJobs,
+    ...jobs.filter(j=>j.status==='Closed'&&j.openDate&&j.openDate>=fromStr&&j.openDate<=toStr)
+  ];
+  const posTracker=trackerJobs.map(j=>{
     const jCands=candidates.filter(c=>c.jobId===j.id);
     const inInterview=jCands.filter(c=>c.stage==='Interview').length;
     const inOffer=jCands.filter(c=>c.stage==='Offer').length;
@@ -2289,11 +2293,16 @@ function renderManagement(){
     const daysOpen=daysAgo(j.openDate);
     const pct=Math.min(100,Math.round(hired/positions*100));
     let badge,badgeC;
-    if(daysOpen===null||daysOpen<=30){badge='On Track';badgeC='#059669';}
+    if(j.status==='Closed'){badge='Closed';badgeC='#6B7280';}
+    else if(daysOpen===null||daysOpen<=30){badge='On Track';badgeC='#059669';}
     else if(daysOpen<=60){badge='Delayed';badgeC='#D97706';}
     else{badge='At Risk';badgeC='#DC2626';}
-    return{j,jCands:jCands.length,inInterview,inOffer,hired,positions,daysOpen,pct,badge,badgeC};
-  }).sort((a,b)=>(b.daysOpen||0)-(a.daysOpen||0));
+    return{j,jCands:jCands.length,inInterview,inOffer,hired,positions,daysOpen,pct,badge,badgeC,isClosed:j.status==='Closed'};
+  }).sort((a,b)=>{
+    // Open jobs first (sorted by daysOpen desc), then closed jobs
+    if(a.isClosed!==b.isClosed)return a.isClosed?1:-1;
+    return(b.daysOpen||0)-(a.daysOpen||0);
+  });
 
   // ── Aging jobs (>30 days) ─────────────────────────────────
   const agingJobs=posTracker.filter(r=>r.daysOpen!==null&&r.daysOpen>30);
@@ -2357,7 +2366,7 @@ function renderManagement(){
   // KPI Row
   const kpiRow=`
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px">
-      ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#4F46E5')}
+      ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#D97706')}
       ${kpiCard('Active Candidates',activeCands.length,`${periodCands.length} applied in period`,'#0891B2')}
       ${kpiCard('Interviews in Period',periodInts.length,`${pendingFb.length} feedback pending`,'#D97706')}
       ${kpiCard('Offers Extended',offersExtended.length,`${offersInPeriod.length} selections in period`,'#10B981')}
@@ -2389,7 +2398,7 @@ function renderManagement(){
       <td style="font-weight:600;font-size:13px;color:#111827">${r.j.title}</td>
       <td style="font-size:12px;color:#6B7280">${r.j.dept||'—'}</td>
       <td style="font-size:12px;color:#6B7280">${r.j.hm||'—'}</td>
-      <td style="text-align:center;font-weight:700;color:#4F46E5">${r.positions}</td>
+      <td style="text-align:center;font-weight:700;color:#D97706">${r.positions}</td>
       <td style="text-align:center">${r.jCands}</td>
       <td style="text-align:center">${r.inInterview}</td>
       <td style="text-align:center">${r.inOffer}</td>
@@ -2403,7 +2412,7 @@ function renderManagement(){
       <td style="text-align:center;font-size:12px;color:#6B7280">${r.daysOpen!==null?r.daysOpen+'d':'—'}</td>
       <td><span style="padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${r.badgeC}20;color:${r.badgeC}">${r.badge}</span></td>
     </tr>`).join('')
-    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:20px">No open positions</td></tr>';
+    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:20px">No positions in this period</td></tr>';
 
   const tblHdr=`<table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="border-bottom:2px solid #E5E7EB">
@@ -2419,7 +2428,7 @@ function renderManagement(){
       const stageChips=Object.entries(d.stageCnts).filter(([,n])=>n>0).map(([st,n])=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:${_stgColor[st]}18;color:${_stgColor[st]};margin:2px 2px 0 0">${n} ${st}</span>`).join('');
       return`<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:12px 16px;min-width:180px;flex:1">
         <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">${d.dept}</div>
-        <div style="font-size:11px;color:#4F46E5;font-weight:600;margin:2px 0 4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
+        <div style="font-size:11px;color:#D97706;font-weight:600;margin:2px 0 4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
         <div style="font-size:24px;font-weight:800;color:#111827;margin:2px 0 6px">${d.total} <span style="font-size:12px;font-weight:400;color:#9CA3AF">candidates</span></div>
         <div style="line-height:1.8">${stageChips||'<span style="font-size:11px;color:#9CA3AF">No candidates yet</span>'}</div>
       </div>`;
@@ -2447,7 +2456,7 @@ function renderManagement(){
     </div>`;
 
   // Source mix
-  const srcColors=['#4F46E5','#0891B2','#D97706','#10B981','#7C3AED','#DC2626','#DB2777'];
+  const srcColors=['#D97706','#0891B2','#D97706','#10B981','#7C3AED','#DC2626','#DB2777'];
   const srcHtml=Object.keys(srcMap).length?`
     <div style="display:flex;flex-wrap:wrap;gap:8px">
     ${Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>{
@@ -2510,7 +2519,7 @@ function renderManagement(){
     <div style="display:flex;flex-wrap:wrap;gap:10px">
       <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px 20px;flex:1;min-width:160px;text-align:center">
         <div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase">Applied → First Interview</div>
-        <div style="font-size:28px;font-weight:800;color:#4F46E5;margin:6px 0">${avgToInt!==null?avgToInt+'d':'—'}</div>
+        <div style="font-size:28px;font-weight:800;color:#D97706;margin:6px 0">${avgToInt!==null?avgToInt+'d':'—'}</div>
         <div style="font-size:11px;color:#9CA3AF">avg across ${toIntDays.length} candidates</div>
       </div>
       <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px 20px;flex:1;min-width:160px;text-align:center">
@@ -2537,7 +2546,7 @@ function renderManagement(){
       ${section('Hiring Funnel','🔽',funnelBars)}
       ${section('Period Activity','📆',activityHtml)}
     </div>
-    ${section('Position Tracker — Open Roles','📋',tblHdr)}
+    ${section('Position Tracker — All Roles','📋',tblHdr)}
     ${section('Pipeline by Department','🏢',deptHtml)}
     ${section('Hiring Velocity & Pipeline Health','⏱',velHtml)}
     ${section('Candidate Source Mix','🌐',srcHtml)}
@@ -2554,7 +2563,7 @@ const getCand=id=>candidates.find(c=>c.id===id);
 const getIS=id=>intSchedule.find(i=>i.id===id);
 const getLog=id=>intLog.find(l=>l.id===id);
 const getSel=id=>selections.find(s=>s.id===id);
-const avColor=name=>{const c=['#4F46E5','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777','#0E7490'];let h=0;for(const x of (name||''))h=x.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length];};
+const avColor=name=>{const c=['#D97706','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777','#0E7490'];let h=0;for(const x of (name||''))h=x.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length];};
 const initials=name=>(name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
 const fmtDate=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
 const fmtTime=t=>{if(!t||t==='00:00')return'—';const[h,m]=t.split(':').map(Number);const a=h>=12?'PM':'AM';return`${h%12||12}:${String(m).padStart(2,'0')} ${a}`;};
@@ -2749,13 +2758,13 @@ function _hashPwd(pwd){
 const AUTH_VER='v2'; // pure-JS 16-char hash; bump this string to force a clean reset on next load
 function _loadUsers(){
   if(window._SANDBOX_MODE){users=[];return;}          // no storage in sandboxed iframe
-  try{users=JSON.parse(localStorage.getItem('hrp_users_stg')||'[]');}catch(e){users=[];return;}
+  try{users=JSON.parse(localStorage.getItem('hrp_users')||'[]');}catch(e){users=[];return;}
   // Clear stale data whenever: (a) auth version mismatch, or (b) any stored hash isn't 16 hex chars
   const badHash=users.length&&users[0].pwdHash&&!/^[0-9a-f]{16}$/.test(users[0].pwdHash);
   try{
-    if(localStorage.getItem('hrp_auth_ver_stg')!==AUTH_VER||badHash){
-      users=[];localStorage.removeItem('hrp_users_stg');
-      localStorage.setItem('hrp_auth_ver_stg',AUTH_VER);
+    if(localStorage.getItem('hrp_auth_ver')!==AUTH_VER||badHash){
+      users=[];localStorage.removeItem('hrp_users');
+      localStorage.setItem('hrp_auth_ver',AUTH_VER);
     }
   }catch(e){users=[];}
 }
@@ -2764,7 +2773,7 @@ function resetAuth(){
   const link=document.getElementById('login-reset-link');
   if(link&&link.dataset.confirm==='1'){
     // Second click — do the reset
-    try{localStorage.removeItem('hrp_users_stg');localStorage.removeItem('hrp_auth_ver_stg');}catch(e){}
+    try{localStorage.removeItem('hrp_users');localStorage.removeItem('hrp_auth_ver');}catch(e){}
     users=[];
     const errEl=document.getElementById('login-error');
     if(errEl){errEl.style.color='#059669';errEl.textContent='✓ Reset done. Log in with admin / Admin@123';}
@@ -2782,11 +2791,11 @@ function resetAuth(){
   }
 }
 function _saveUsers(){
-  try{localStorage.setItem('hrp_users_stg',JSON.stringify(users));}catch(e){}
+  try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}
   _pushUsersToGitHub(); // async, fire-and-forget; no-op if no token configured
 }
 // ── GitHub-backed user sync (automatic cross-device) ──────────────────────
-// _sharedWriteToken: loaded from hrp_users_staging.json at startup, shared automatically with all users
+// _sharedWriteToken: loaded from hrp_users.json at startup, shared automatically with all users
 let _sharedWriteToken='';
 function _getWriteToken(){return(localStorage.getItem('hrp_gh_token')||'').trim()||_sharedWriteToken;}
 // XOR-scramble token before storing in GitHub so secret scanners can't detect it
@@ -2795,7 +2804,7 @@ function _encToken(s){try{return btoa(unescape(encodeURIComponent(s.split('').ma
 function _decToken(s){try{const d=decodeURIComponent(escape(atob(s)));return d.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^_TK.charCodeAt(i%_TK.length))).join('');}catch(e){return '';}}
 async function _syncUsersFromGitHub(){
   // Public read — no auth needed
-  // hrp_users_staging.json format: {users:[...], wt:"shared_write_token"} OR legacy plain array
+  // hrp_users.json format: {users:[...], wt:"shared_write_token"} OR legacy plain array
   try{
     const r=await fetch(GITHUB_USERS_RAW+'?_='+Date.now());
     if(!r.ok)return;
@@ -2809,7 +2818,7 @@ async function _syncUsersFromGitHub(){
     const ghNames=new Set(ghUsers.map(u=>u.username.toLowerCase()));
     const localOnly=users.filter(u=>!ghNames.has(u.username.toLowerCase()));
     users=[...ghUsers,...localOnly];
-    try{localStorage.setItem('hrp_users_stg',JSON.stringify(users));}catch(e){}
+    try{localStorage.setItem('hrp_users',JSON.stringify(users));}catch(e){}
   }catch(e){}
 }
 async function _pushUsersToGitHub(){
@@ -2821,7 +2830,7 @@ async function _pushUsersToGitHub(){
     // Embed write token (XOR-scrambled + base64 so GitHub secret scanning won't detect it)
     const payload={users,wt:_encToken(token)};
     const content=btoa(unescape(encodeURIComponent(JSON.stringify(payload,null,2))));
-    const body={message:'chore: staging sync user list',content};
+    const body={message:'chore: sync user list',content};
     if(sha)body.sha=sha;
     const resp=await fetch(GITHUB_USERS_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(resp.ok||resp.status===201){_sharedWriteToken=token;showMsg('✓ Users & sync token saved to GitHub — all users will now auto-sync data');}
@@ -2835,7 +2844,7 @@ function saveGHToken(){
   document.getElementById('gh-token-input').value='';
   _updateGHTokenStatus();
   showMsg('✓ Token saved. Pushing to GitHub so all users can sync…');
-  _pushUsersToGitHub(); // embeds token in hrp_users_staging.json → all users get it on next load
+  _pushUsersToGitHub(); // embeds token in hrp_users.json → all users get it on next load
 }
 function clearGHToken(){
   localStorage.removeItem('hrp_gh_token');
@@ -2888,14 +2897,14 @@ async function _loadDataFromGitHub(){
   }catch(e){return false;}
 }
 async function _pushDataToGitHub(){
-  const token=_getWriteToken(); // personal token first, then shared token from hrp_users_staging.json
+  const token=_getWriteToken(); // personal token first, then shared token from hrp_users.json
   if(!token)return; // no token available — only localStorage save (single-device behaviour)
   try{
     const metaResp=await fetch(GITHUB_DATA_JSON_API,{headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json'}});
     const sha=metaResp.ok?(await metaResp.json()).sha:undefined;
     const d={jobs,candidates,intSchedule,intLog,selections,auditLog,nextJId,nextCId,nextISId,nextLId,nextSId,nextAuditId,deletedRecords,nextDelId};
     const content=btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-    const body={message:'chore: staging auto-save',content};
+    const body={message:'chore: auto-save HR data',content};
     if(sha)body.sha=sha;
     const resp=await fetch(GITHUB_DATA_JSON_API,{method:'PUT',headers:{Authorization:'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(resp.ok||resp.status===201){_lastPushAt=Date.now();showMsg('✓ Data synced to GitHub');}
@@ -2917,7 +2926,7 @@ function exportSetupCode(){
     <div style="font-size:12px;color:#6B7280;margin-bottom:14px">Share this code with users so they can sign in from any device. They paste it on the "Setup from Code" panel on the login screen.</div>
     <textarea readonly rows="4" onclick="this.select()" style="width:100%;padding:10px 12px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:11px;font-family:monospace;box-sizing:border-box;background:#F9FAFB;resize:none">${code}</textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button onclick="navigator.clipboard.writeText('${code}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)}).catch(()=>{})" style="flex:1;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 Copy</button>
+      <button onclick="navigator.clipboard.writeText('${code}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)}).catch(()=>{})" style="flex:1;padding:10px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 Copy</button>
       <button onclick="document.getElementById('export-code-overlay').remove()" style="padding:10px 18px;background:#F3F4F6;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Close</button>
     </div>
   </div>`;
@@ -2975,7 +2984,7 @@ async function doLogin(){
     // If the user logs in as admin/Admin@123, always succeed and auto-repair
     // the admin record — but preserve all other users in the list.
     if(uname.toLowerCase()==='admin' && h===adminHash){
-      try{localStorage.setItem('hrp_auth_ver_stg',AUTH_VER);}catch(e){}
+      try{localStorage.setItem('hrp_auth_ver',AUTH_VER);}catch(e){}
       const now=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
       let adminRec=users.find(u=>u.username.toLowerCase()==='admin');
       if(!adminRec){users.push({username:'admin',pwdHash:adminHash,role:'admin',createdAt:now});}
@@ -2987,7 +2996,7 @@ async function doLogin(){
     const user=users.find(u=>u.username.toLowerCase()===uname.toLowerCase()&&u.pwdHash===h);
     if(user){
       _loggedInUser=user;_currentUser=user.username;
-      try{if(!window._SANDBOX_MODE)localStorage.setItem('hrp_session_stg',JSON.stringify({username:user.username,role:user.role}));}catch(e){}
+      try{if(!window._SANDBOX_MODE)localStorage.setItem('hrp_session',JSON.stringify({username:user.username,role:user.role}));}catch(e){}
       document.getElementById('login-gate').style.display='none';
       document.getElementById('sb-user-name').textContent=user.username;
       document.getElementById('sb-user-role').textContent=user.role==='admin'?'👑 Admin':'👤 User';
@@ -3010,7 +3019,7 @@ async function doLogin(){
 }
 function doLogout(){
   _loggedInUser=null;_currentUser='';
-  try{localStorage.removeItem('hrp_session_stg');}catch(e){}
+  try{localStorage.removeItem('hrp_session');}catch(e){}
   document.getElementById('login-gate').style.display='flex';
   document.getElementById('sb-user-name').textContent='—';
   document.getElementById('sb-user-role').textContent='';
@@ -3121,7 +3130,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   // ── Auto-restore session across page refreshes ──
   if(!window._SANDBOX_MODE){
     try{
-      const sess=JSON.parse(localStorage.getItem('hrp_session_stg')||'null');
+      const sess=JSON.parse(localStorage.getItem('hrp_session')||'null');
       if(sess&&sess.username){
         const user=users.find(u=>u.username.toLowerCase()===sess.username.toLowerCase());
         if(user){
@@ -3132,7 +3141,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
           document.getElementById('sb-manage-btn').style.display=user.role==='admin'?'':'none';
           loadFromGitHub();
         }else{
-          localStorage.removeItem('hrp_session_stg');
+          localStorage.removeItem('hrp_session');
         }
       }
     }catch(e){}

@@ -2421,34 +2421,37 @@ function renderManagement(){
     </div>`;
   }).join('');
 
-  // Position Tracker
+  // Position Tracker — compact single-line rows
+  const _tdC='padding:4px 6px;white-space:nowrap;vertical-align:middle;';
   const posRows=posTracker.length?posTracker.map(r=>`
-    <tr>
-      <td style="font-weight:600;font-size:13px;color:#111827">${r.j.title}</td>
-      <td style="font-size:12px;color:#6B7280">${r.j.dept||'—'}</td>
-      <td style="font-size:12px;color:#6B7280">${r.j.hm||'—'}</td>
-      <td style="text-align:center;font-weight:700;color:#4F46E5">${r.positions}</td>
-      <td style="text-align:center">${r.jCands}</td>
-      <td style="text-align:center">${r.inInterview}</td>
-      <td style="text-align:center">${r.inOffer}</td>
-      <td style="text-align:center;font-weight:600;color:#059669">${r.hired}</td>
-      <td style="width:100px">
-        <div style="background:#F3F4F6;border-radius:8px;height:8px;overflow:hidden">
-          <div style="height:100%;width:${r.pct}%;background:#059669;border-radius:8px"></div>
+    <tr style="border-bottom:1px solid #F3F4F6">
+      <td style="${_tdC}font-weight:600;font-size:12px;color:#111827;max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.j.title}</td>
+      <td style="${_tdC}font-size:11px;color:#6B7280">${r.j.dept||'—'}</td>
+      <td style="${_tdC}font-size:11px;color:#6B7280">${r.j.hm||'—'}</td>
+      <td style="${_tdC}text-align:center;font-weight:700;font-size:12px;color:#4F46E5">${r.positions}</td>
+      <td style="${_tdC}text-align:center;font-size:12px">${r.jCands}</td>
+      <td style="${_tdC}text-align:center;font-size:12px">${r.inInterview}</td>
+      <td style="${_tdC}text-align:center;font-size:12px">${r.inOffer}</td>
+      <td style="${_tdC}text-align:center;font-size:12px;font-weight:600;color:#059669">${r.hired}</td>
+      <td style="${_tdC}min-width:90px">
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="flex:1;background:#F3F4F6;border-radius:4px;height:5px;overflow:hidden">
+            <div style="height:100%;width:${r.pct}%;background:#059669;border-radius:4px"></div>
+          </div>
+          <span style="font-size:10px;color:#6B7280;min-width:26px;text-align:right">${r.pct}%</span>
         </div>
-        <div style="font-size:10px;color:#6B7280;text-align:center;margin-top:2px">${r.pct}%</div>
       </td>
-      <td style="text-align:center;font-size:12px;color:#6B7280">${r.daysOpen!==null?r.daysOpen+'d':'—'}</td>
-      <td><span style="padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${r.badgeC}20;color:${r.badgeC}">${r.badge}</span></td>
+      <td style="${_tdC}text-align:center;font-size:11px;color:#6B7280">${r.daysOpen!==null?r.daysOpen+'d':'—'}</td>
+      <td style="${_tdC}"><span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${r.badgeC}20;color:${r.badgeC};white-space:nowrap">${r.badge}</span></td>
     </tr>`).join('')
-    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:20px">No positions in this period</td></tr>';
+    :'<tr><td colspan="11" style="text-align:center;color:#9CA3AF;padding:16px">No positions in this period</td></tr>';
 
-  const tblHdr=`<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="border-bottom:2px solid #E5E7EB">
-      ${['Role','Dept','Hiring Mgr','Open','Applied','Interview','Offer','Hired','Progress','Days Open','Status'].map(h=>`<th style="text-align:left;padding:8px 6px;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.04em">${h}</th>`).join('')}
+  const tblHdr=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#F9FAFB;border-bottom:1px solid #E5E7EB">
+      ${['Role','Dept','Hiring Mgr','Pos','Applied','Interview','Offer','Hired','Progress','Days','Status'].map(h=>`<th style="text-align:left;padding:5px 6px;font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
     </tr></thead>
     <tbody>${posRows}</tbody>
-  </table>`;
+  </table></div>`;
 
   // Dept Pipeline (open jobs only) — all stages with count > 0
   const deptHtml=deptPipeline.length?`

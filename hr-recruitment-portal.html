@@ -2298,11 +2298,21 @@ function renderManagement(){
   const srcTotal=Object.values(srcMap).reduce((a,b)=>a+b,0)||1;
 
   // ── Position tracker ─────────────────────────────────────
-  // Open jobs + Closed jobs whose openDate falls within the selected period
-  const trackerJobs=[
-    ...openJobs,
-    ...jobs.filter(j=>j.status==='Closed'&&inPeriod(j.openDate,fromStr,toStr))
-  ];
+  // Build a deduplicated set of jobs to track:
+  //   1. All currently open jobs
+  //   2. Closed jobs opened within the period
+  //   3. Any job where a candidate was Joined/Selected during the period
+  const _joinedJobIds=new Set(
+    joinedInPeriod.map(s=>{
+      const c=candidates.find(cx=>cx.name.trim().toLowerCase()===s.candidateName.trim().toLowerCase());
+      return c?.jobId;
+    }).filter(Boolean)
+  );
+  const _trackerMap=new Map();
+  openJobs.forEach(j=>_trackerMap.set(j.id,j));
+  jobs.filter(j=>j.status==='Closed'&&inPeriod(j.openDate,fromStr,toStr)).forEach(j=>_trackerMap.set(j.id,j));
+  jobs.filter(j=>_joinedJobIds.has(j.id)).forEach(j=>_trackerMap.set(j.id,j));
+  const trackerJobs=[..._trackerMap.values()];
   const posTracker=trackerJobs.map(j=>{
     const jCands=candidates.filter(c=>c.jobId===j.id);
     const inInterview=jCands.filter(c=>c.stage==='Interview').length;
@@ -2475,34 +2485,6 @@ function renderManagement(){
       </div>`).join('')}
     </div>`;
 
-  // ── Period Activity Log (from audit trail) ────────────────
-  const _actionIcon={Created:'➕',Modified:'✏️','Selection Updated':'✏️',Deleted:'🗑️',Login:'🔑',Uploaded:'📤'};
-  const _entityColor={Candidate:'#3B82F6',Job:'#7C3AED',Interview:'#8B5CF6',Selection:'#10B981',AuditLog:'#9CA3AF'};
-  const periodAudit=auditLog
-    .filter(a=>inPeriod(a.timestamp,fromStr,toStr))
-    .sort((a,b)=>b.id-a.id); // newest first (id is monotonically increasing)
-  const auditFeedHtml=periodAudit.length?`
-    <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="border-bottom:2px solid #E5E7EB">
-        ${['Time','User','Action','Details'].map(h=>`<th style="text-align:left;padding:7px 8px;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;white-space:nowrap">${h}</th>`).join('')}
-      </tr></thead>
-      <tbody>
-      ${periodAudit.map(a=>`<tr style="border-bottom:1px solid #F3F4F6">
-        <td style="padding:7px 8px;white-space:nowrap;color:#6B7280;font-size:11px">${a.timestamp}</td>
-        <td style="padding:7px 8px;white-space:nowrap;font-weight:600">${a.user||'—'}</td>
-        <td style="padding:7px 8px;white-space:nowrap">
-          <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:${(_entityColor[a.entity]||'#6B7280')}18;color:${(_entityColor[a.entity]||'#6B7280')}">
-            ${_actionIcon[a.action]||'📋'} ${a.action} ${a.entity}
-          </span>
-        </td>
-        <td style="padding:7px 8px;color:#374151;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(a.summary||'').replace(/"/g,'&quot;')}">${a.summary||'—'}</td>
-      </tr>`).join('')}
-      </tbody>
-    </table>
-    </div>`
-  :'<div style="color:#9CA3AF;text-align:center;padding:20px">No activity recorded in this period</div>';
-
   // Source mix
   const srcColors=['#4F46E5','#0891B2','#D97706','#10B981','#7C3AED','#DC2626','#DB2777'];
   const srcHtml=Object.keys(srcMap).length?`
@@ -2594,7 +2576,6 @@ function renderManagement(){
       ${section('Hiring Funnel','🔽',funnelBars)}
       ${section('Period Activity','📆',activityHtml)}
     </div>
-    ${section(`Activity Log — ${periodLabel} (${periodAudit.length} events)`,'🗒️',auditFeedHtml)}
     ${section('Position Tracker — All Roles','📋',tblHdr)}
     ${section('Pipeline by Department','🏢',deptHtml)}
     ${section('Hiring Velocity & Pipeline Health','⏱',velHtml)}

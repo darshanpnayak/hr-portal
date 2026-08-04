@@ -2205,8 +2205,17 @@ function renderManagement(){
   // ── Date helpers ──────────────────────────────────────────
   const todayStr=localYMD(); // local date, not UTC
   const nowMs=Date.now();
-  // Parse any date string (YYYY-MM-DD or locale variants) to a Date at local midnight
-  const parseDate=s=>{if(!s)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(s))return new Date(s+'T00:00');const d=new Date(s);return isNaN(d)?null:d;};
+  // Parse any date string to a Date at local midnight.
+  // Handles: YYYY-MM-DD, en-IN locale strings ("31 Jul 2026, 06:49 pm"), and ISO strings.
+  const _MON={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const parseDate=s=>{
+    if(!s)return null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s))return new Date(s+'T00:00');
+    // en-IN locale string: "DD MMM YYYY, ..." — extract date part
+    const m=s.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+    if(m){const mo=_MON[m[2]];if(mo!==undefined)return new Date(+m[3],mo,+m[1]);}
+    const d=new Date(s);return isNaN(d)?null:d;
+  };
   // True if dateStr falls within [from, to] (all YYYY-MM-DD strings)
   const inPeriod=(dateStr,from,to)=>{const d=parseDate(dateStr);const f=parseDate(from);const t=parseDate(to);return d&&f&&t&&d>=f&&d<=t;};
   const daysBetween=(a,b)=>{

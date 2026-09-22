@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>HR Recruitment Portal</title>
+<title>[STAGING] HR Recruitment Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --primary:#D97706;--primary-light:#EEF2FF;--primary-dark:#3730A3;
+  --primary:#4F46E5;--primary-light:#EEF2FF;--primary-dark:#3730A3;
   --success:#10B981;--success-light:#ECFDF5;
   --warning:#F59E0B;--warning-light:#FFFBEB;
   --danger:#EF4444;--danger-light:#FEF2F2;
@@ -239,9 +239,9 @@ window.addEventListener('load', function(){
 });
 </script>
 </head>
-<body>
+<body><div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#EA580C;color:white;text-align:center;font-size:12px;font-weight:700;padding:3px;letter-spacing:1px">⚠ STAGING ENVIRONMENT — Data is separate from production</div><div style="height:22px"></div>
 <!-- LOGIN GATE -->
-<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#D97706 0%,#7C3AED 100%);display:flex;align-items:center;justify-content:center">
+<div id="login-gate" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%);display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:18px;padding:40px 36px;width:360px;box-shadow:0 24px 60px rgba(0,0,0,.25)">
     <div style="text-align:center;margin-bottom:26px">
       <div style="font-size:40px;margin-bottom:8px">🔐</div>
@@ -259,7 +259,7 @@ window.addEventListener('load', function(){
         style="width:100%;padding:10px 14px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none">
     </div>
     <div id="login-error" style="color:#DC2626;font-size:12px;margin-bottom:10px;min-height:16px;text-align:center"></div>
-    <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#D97706,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
+    <button id="login-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Sign In →</button>
     <a href="#" id="login-reset-link" style="display:none"></a>
     <div style="text-align:center;margin-top:14px">
       <a href="#" onclick="toggleSetupPanel(event)" style="font-size:12px;color:#9CA3AF;text-decoration:none">🔑 First time on this device? Setup from Code</a>
@@ -267,7 +267,7 @@ window.addEventListener('load', function(){
     <div id="setup-code-panel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #E5E7EB">
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Paste Setup Code from admin:</label>
       <textarea id="setup-code-input" rows="3" placeholder="Paste the code shared by your admin…" style="width:100%;padding:8px 12px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:11px;box-sizing:border-box;font-family:monospace;resize:vertical"></textarea>
-      <button onclick="applySetupCode()" style="width:100%;margin-top:8px;padding:9px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Apply & Sync Users</button>
+      <button onclick="applySetupCode()" style="width:100%;margin-top:8px;padding:9px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Apply & Sync Users</button>
       <div id="setup-code-msg" style="font-size:12px;text-align:center;margin-top:7px;min-height:16px"></div>
     </div>
   </div>
@@ -1159,7 +1159,9 @@ function renderDashboard(){
   const waitCl   =effectiveLog.filter(i=>i.l1Status==='Waiting for Client Feedback').length;
   // Selection counts
   const joined   =selections.filter(s=>s.status==='Joined').length;
-  const offerRel =selections.filter(s=>s.status==='Offer Released').length;
+  // Offer Released = cumulative count: includes currently "Offer Released" + those who have already Joined
+  // (Joined always progresses through Offer Released, so counting both gives total offers ever released)
+  const offerRel =selections.filter(s=>['Offer Released','Joined'].includes(s.status)).length;
   const offerYet =selections.filter(s=>s.status==='Offer Yet to Be Released').length;
   const schedInt =intSchedule.filter(i=>i.status==='Scheduled').length;
 
@@ -1170,8 +1172,8 @@ function renderDashboard(){
     <div class="stat-card"><div class="sc-label">Scheduled Interviews</div><div class="sc-value">${schedInt}</div><div class="sc-sub">${intSchedule.filter(i=>i.status==='Completed').length} completed</div></div>
     <div class="stat-card sc-green"><div class="sc-label">L1 Selected</div><div class="sc-value">${l1sel}</div><div class="sc-sub">${l2prog} progressed to L2</div></div>
     <div class="stat-card sc-amber"><div class="sc-label">Final Selected</div><div class="sc-value">${finalSel}</div><div class="sc-sub">${selections.length} in selections · ${offerYet} offer pending</div></div>
-    <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release</div></div>
-    <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel} offer pending</div></div>
+    <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release · ${joined} joined</div></div>
+    <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel-joined} offer pending joining</div></div>
     <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show / On Hold</div><div class="sc-value">${csc('Rejected')+noShow+csc('On Hold')}</div><div class="sc-sub">${csc('Rejected')} rejected · ${noShow} no show · ${csc('On Hold')} on hold</div></div>`;
 
   // ── Candidate Pipeline (all stages) + Interview Log Status (all statuses)
@@ -2164,7 +2166,7 @@ function renderAnalytics(){
 
   killC('dept');
   const depts=[...new Set(jobs.map(j=>j.dept))];
-  _charts.dept=new Chart(document.getElementById('chart-dept'),{type:'doughnut',data:{labels:depts,datasets:[{data:depts.map(d=>candidates.filter(c=>jobs.filter(j=>j.dept===d).map(j=>j.id).includes(c.jobId)).length),backgroundColor:['#D97706','#0891B2','#D97706','#DC2626','#059669','#7C3AED','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+  _charts.dept=new Chart(document.getElementById('chart-dept'),{type:'doughnut',data:{labels:depts,datasets:[{data:depts.map(d=>candidates.filter(c=>jobs.filter(j=>j.dept===d).map(j=>j.id).includes(c.jobId)).length),backgroundColor:['#4F46E5','#0891B2','#D97706','#DC2626','#059669','#7C3AED','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
 
   killC('logstatus');
   const lsc={};intLog.forEach(l=>{const st=l.l1Status||'Unknown';lsc[st]=(lsc[st]||0)+1;});
@@ -2395,7 +2397,7 @@ function renderManagement(){
   // KPI Row
   const kpiRow=`
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px">
-      ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#D97706')}
+      ${kpiCard('Open Positions',openJobs.length,`${openJobs.reduce((s,j)=>s+(j.positions||1),0)} total slots`,'#4F46E5')}
       ${kpiCard('Active Candidates',activeCands.length,`${periodCands.length} applied in period`,'#0891B2')}
       ${kpiCard('Interviews in Period',periodInts.length,`${pendingFb.length} feedback pending`,'#D97706')}
       ${kpiCard('Offers Extended',offersExtended.length,`${offersInPeriod.length} offers · ${joinedInPeriod.length} joined`,'#10B981')}
@@ -2428,7 +2430,7 @@ function renderManagement(){
       <td style="${_tdC}font-weight:600;font-size:12px;color:#111827;max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.j.title}</td>
       <td style="${_tdC}font-size:11px;color:#6B7280">${r.j.dept||'—'}</td>
       <td style="${_tdC}font-size:11px;color:#6B7280">${r.j.hm||'—'}</td>
-      <td style="${_tdC}text-align:center;font-weight:700;font-size:12px;color:#D97706">${r.positions}</td>
+      <td style="${_tdC}text-align:center;font-weight:700;font-size:12px;color:#4F46E5">${r.positions}</td>
       <td style="${_tdC}text-align:center;font-size:12px">${r.jCands}</td>
       <td style="${_tdC}text-align:center;font-size:12px">${r.inInterview}</td>
       <td style="${_tdC}text-align:center;font-size:12px">${r.inOffer}</td>
@@ -2460,7 +2462,7 @@ function renderManagement(){
       const stageChips=Object.entries(d.stageCnts).filter(([,n])=>n>0).map(([st,n])=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600;background:${_stgColor[st]}18;color:${_stgColor[st]};margin:2px 2px 0 0">${n} ${st}</span>`).join('');
       return`<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:12px 16px;min-width:180px;flex:1">
         <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase">${d.dept}</div>
-        <div style="font-size:11px;color:#D97706;font-weight:600;margin:2px 0 4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
+        <div style="font-size:11px;color:#4F46E5;font-weight:600;margin:2px 0 4px">${d.openCount} open position${d.openCount!==1?'s':''}</div>
         <div style="font-size:24px;font-weight:800;color:#111827;margin:2px 0 6px">${d.total} <span style="font-size:12px;font-weight:400;color:#9CA3AF">candidates</span></div>
         <div style="line-height:1.8">${stageChips||'<span style="font-size:11px;color:#9CA3AF">No candidates yet</span>'}</div>
       </div>`;
@@ -2489,7 +2491,7 @@ function renderManagement(){
     </div>`;
 
   // Source mix
-  const srcColors=['#D97706','#0891B2','#D97706','#10B981','#7C3AED','#DC2626','#DB2777'];
+  const srcColors=['#4F46E5','#0891B2','#D97706','#10B981','#7C3AED','#DC2626','#DB2777'];
   const srcHtml=Object.keys(srcMap).length?`
     <div style="display:flex;flex-wrap:wrap;gap:8px">
     ${Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>{
@@ -2552,7 +2554,7 @@ function renderManagement(){
     <div style="display:flex;flex-wrap:wrap;gap:10px">
       <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px 20px;flex:1;min-width:160px;text-align:center">
         <div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase">Applied → First Interview</div>
-        <div style="font-size:28px;font-weight:800;color:#D97706;margin:6px 0">${avgToInt!==null?avgToInt+'d':'—'}</div>
+        <div style="font-size:28px;font-weight:800;color:#4F46E5;margin:6px 0">${avgToInt!==null?avgToInt+'d':'—'}</div>
         <div style="font-size:11px;color:#9CA3AF">avg across ${toIntDays.length} candidates</div>
       </div>
       <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:14px 20px;flex:1;min-width:160px;text-align:center">
@@ -2596,7 +2598,7 @@ const getCand=id=>candidates.find(c=>c.id===id);
 const getIS=id=>intSchedule.find(i=>i.id===id);
 const getLog=id=>intLog.find(l=>l.id===id);
 const getSel=id=>selections.find(s=>s.id===id);
-const avColor=name=>{const c=['#D97706','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777','#0E7490'];let h=0;for(const x of (name||''))h=x.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length];};
+const avColor=name=>{const c=['#4F46E5','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777','#0E7490'];let h=0;for(const x of (name||''))h=x.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length];};
 const initials=name=>(name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
 const fmtDate=d=>{if(!d)return'—';try{return new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return d;}};
 const fmtTime=t=>{if(!t||t==='00:00')return'—';const[h,m]=t.split(':').map(Number);const a=h>=12?'PM':'AM';return`${h%12||12}:${String(m).padStart(2,'0')} ${a}`;};
@@ -2961,7 +2963,7 @@ function exportSetupCode(){
     <div style="font-size:12px;color:#6B7280;margin-bottom:14px">Share this code with users so they can sign in from any device. They paste it on the "Setup from Code" panel on the login screen.</div>
     <textarea readonly rows="4" onclick="this.select()" style="width:100%;padding:10px 12px;border:1.5px solid #D1D5DB;border-radius:8px;font-size:11px;font-family:monospace;box-sizing:border-box;background:#F9FAFB;resize:none">${code}</textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button onclick="navigator.clipboard.writeText('${code}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)}).catch(()=>{})" style="flex:1;padding:10px;background:#D97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 Copy</button>
+      <button onclick="navigator.clipboard.writeText('${code}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)}).catch(()=>{})" style="flex:1;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 Copy</button>
       <button onclick="document.getElementById('export-code-overlay').remove()" style="padding:10px 18px;background:#F3F4F6;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Close</button>
     </div>
   </div>`;

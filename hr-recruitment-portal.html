@@ -1170,9 +1170,7 @@ function renderDashboard(){
     <div class="stat-card sc-info"><div class="sc-label">Open Jobs</div><div class="sc-value">${openJobs}</div><div class="sc-sub">${openPositions} open position${openPositions!==1?'s':''} · ${jobs.filter(j=>j.status==='On Hold').length} on hold</div></div>
     <div class="stat-card sc-purple"><div class="sc-label">Total Candidates</div><div class="sc-value">${candidates.length}</div><div class="sc-sub">${hired} hired · ${csc('Interview')} in interview</div></div>
     <div class="stat-card"><div class="sc-label">Scheduled Interviews</div><div class="sc-value">${schedInt}</div><div class="sc-sub">${intSchedule.filter(i=>i.status==='Completed').length} completed</div></div>
-    <div class="stat-card sc-green"><div class="sc-label">L1 Selected</div><div class="sc-value">${l1sel}</div><div class="sc-sub">${l2prog} progressed to L2</div></div>
     <div class="stat-card sc-amber"><div class="sc-label">Final Selected</div><div class="sc-value">${finalSel}</div><div class="sc-sub">${selections.length} in selections · ${offerYet} offer pending</div></div>
-    <div class="stat-card sc-info"><div class="sc-label">Offer Released</div><div class="sc-value">${offerRel}</div><div class="sc-sub">${offerYet} yet to release · ${joined} joined</div></div>
     <div class="stat-card sc-green"><div class="sc-label">Joined</div><div class="sc-value">${joined}</div><div class="sc-sub">${offerRel-joined} offer pending joining</div></div>
     <div class="stat-card sc-red"><div class="sc-label">Rejected / No Show / On Hold</div><div class="sc-value">${csc('Rejected')+noShow+csc('On Hold')}</div><div class="sc-sub">${csc('Rejected')} rejected · ${noShow} no show · ${csc('On Hold')} on hold</div></div>`;
 
@@ -2549,6 +2547,158 @@ function renderManagement(){
     </table>`
     :'<div style="color:#059669;text-align:center;padding:12px">✅ No jobs open longer than 30 days</div>';
 
+  // ── Time-to-Hire trend (monthly breakdown) ───────────────
+  const _tthByMonth={};
+  hiredCands.forEach(c=>{
+    const sel=selections.find(s=>s.candidateName&&s.candidateName.trim().toLowerCase()===c.name.trim().toLowerCase()&&s.status==='Joined');
+    const hireDate=sel?.doj;
+    if(!hireDate||!c.appliedDate)return;
+    const days=daysBetween(c.appliedDate,hireDate);
+    if(days===null||days<0)return;
+    const mon=hireDate.slice(0,7);
+    if(!_tthByMonth[mon])_tthByMonth[mon]=[];
+    _tthByMonth[mon].push({days,name:c.name,job:getJob(c.jobId)?.title||'—'});
+  });
+  const _tthMonths=Object.keys(_tthByMonth).sort();
+  const tthTrend=_tthMonths.map((m,idx)=>{
+    const vals=_tthByMonth[m].map(x=>x.days);
+    const avg=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    const prevAvg=idx>0?Math.round(_tthByMonth[_tthMonths[idx-1]].map(x=>x.days).reduce((a,b)=>a+b,0)/_tthByMonth[_tthMonths[idx-1]].length):null;
+    const delta=prevAvg!==null?avg-prevAvg:null; // negative = improving (fewer days)
+    return{month:m,avg,count:vals.length,min:Math.min(...vals),max:Math.max(...vals),delta};
+  });
+  const _fmtMon=m=>{const[y,mo]=m.split('-');const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${names[+mo-1]} ${y}`;};
+  const maxTTHAvg=tthTrend.length?Math.max(...tthTrend.map(t=>t.avg),1):1;
+
+  // ── Time to Close Requirements ────────────────────────────
+  const ttcData=[];
+  jobs.forEach(j=>{
+    if(!j.openDate)return;
+    const jobHiredCands=candidates.filter(c=>c.jobId===j.id&&c.stage==='Hired');
+    if(!jobHiredCands.length)return;
+    const joinDates=jobHiredCands.map(c=>{
+      const sel=selections.find(s=>s.candidateName&&s.candidateName.trim().toLowerCase()===c.name.trim().toLowerCase()&&s.status==='Joined');
+      return sel?.doj||null;
+    }).filter(Boolean).sort();
+    if(!joinDates.length)return;
+    const firstJoin=joinDates[0];
+    const dtc=daysBetween(j.openDate,firstJoin);
+    if(dtc===null||dtc<0)return;
+    ttcData.push({job:j,firstJoin,dtc,hireCount:jobHiredCands.length});
+  });
+  ttcData.sort((a,b)=>b.dtc-a.dtc); // slowest first
+  const avgTTC=ttcData.length?Math.round(ttcData.reduce((s,d)=>s+d.dtc,0)/ttcData.length):null;
+  const fastestTTC=ttcData.length?ttcData[ttcData.length-1].dtc:null;
+  const slowestTTC=ttcData.length?ttcData[0].dtc:null;
+
+  // ── Time-to-Hire Trend HTML ───────────────────────────────
+  const tthSummaryCards=`
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 18px;flex:1;min-width:140px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Overall Avg TTH</div>
+        <div style="font-size:26px;font-weight:800;color:#059669;margin:4px 0">${avgTtf!==null?avgTtf+'d':'—'}</div>
+        <div style="font-size:11px;color:#9CA3AF">across ${ttfVals.length} hire${ttfVals.length!==1?'s':''}</div>
+      </div>
+      ${tthTrend.length>=2?`
+      <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 18px;flex:1;min-width:140px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Latest Month</div>
+        <div style="font-size:26px;font-weight:800;color:#4F46E5;margin:4px 0">${tthTrend[tthTrend.length-1].avg}d</div>
+        <div style="font-size:11px;color:${tthTrend[tthTrend.length-1].delta<0?'#059669':tthTrend[tthTrend.length-1].delta>0?'#DC2626':'#9CA3AF'}">${tthTrend[tthTrend.length-1].delta!==null?(tthTrend[tthTrend.length-1].delta<0?'↓ '+Math.abs(tthTrend[tthTrend.length-1].delta)+'d faster than prior month':tthTrend[tthTrend.length-1].delta>0?'↑ '+tthTrend[tthTrend.length-1].delta+'d slower than prior month':'No change'):'—'}</div>
+      </div>`:''}
+      <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:12px 18px;flex:1;min-width:140px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Applied → Interview</div>
+        <div style="font-size:26px;font-weight:800;color:#D97706;margin:4px 0">${avgToInt!==null?avgToInt+'d':'—'}</div>
+        <div style="font-size:11px;color:#9CA3AF">avg across ${toIntDays.length} candidates</div>
+      </div>
+      <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;padding:12px 18px;flex:1;min-width:140px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Overall Hire Rate</div>
+        <div style="font-size:26px;font-weight:800;color:#7C3AED;margin:4px 0">${totalApplied?Math.round(hiredCands.length/totalApplied*100):0}%</div>
+        <div style="font-size:11px;color:#9CA3AF">${hiredCands.length} hired / ${totalApplied} applied</div>
+      </div>
+    </div>`;
+
+  const tthTrendTable=tthTrend.length?`
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#F9FAFB;border-bottom:1px solid #E5E7EB">
+        ${['Month','Hires','Avg Days (Applied→Hired)','Min','Max','Trend'].map(h=>`<th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+      ${[...tthTrend].reverse().map((t,idx)=>{
+        const barW=Math.max(Math.round(t.avg/maxTTHAvg*120),4);
+        const barC=t.avg<=30?'#059669':t.avg<=60?'#D97706':'#DC2626';
+        const trendIcon=t.delta===null?''
+          :t.delta<0?`<span style="color:#059669;font-weight:700">↓ ${Math.abs(t.delta)}d</span>`
+          :t.delta>0?`<span style="color:#DC2626;font-weight:700">↑ ${t.delta}d</span>`
+          :`<span style="color:#9CA3AF">→ no change</span>`;
+        return`<tr style="border-bottom:1px solid #F3F4F6${idx===0?';background:#F0FDF4':''}">`
+          +`<td style="padding:7px 10px;font-weight:600;color:#111827">${_fmtMon(t.month)}</td>`
+          +`<td style="padding:7px 10px;text-align:center;font-weight:700;color:#4F46E5">${t.count}</td>`
+          +`<td style="padding:7px 10px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#E5E7EB;border-radius:4px;height:14px;width:130px;overflow:hidden"><div style="height:100%;width:${barW}px;background:${barC};border-radius:4px"></div></div><span style="font-weight:700;color:${barC}">${t.avg}d</span></div></td>`
+          +`<td style="padding:7px 10px;color:#6B7280">${t.min}d</td>`
+          +`<td style="padding:7px 10px;color:#6B7280">${t.max}d</td>`
+          +`<td style="padding:7px 10px">${trendIcon}</td>`
+          +`</tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`
+    :'<div style="color:#9CA3AF;text-align:center;padding:20px">No hire data available yet to show trend.</div>';
+
+  const tthHtml=tthSummaryCards+tthTrendTable;
+
+  // ── Time to Close Requirements HTML ─────────────────────
+  const ttcSummaryCards=`
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 18px;flex:1;min-width:130px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Avg Time to Close</div>
+        <div style="font-size:26px;font-weight:800;color:#059669;margin:4px 0">${avgTTC!==null?avgTTC+'d':'—'}</div>
+        <div style="font-size:11px;color:#9CA3AF">${ttcData.length} requirement${ttcData.length!==1?'s':''} closed</div>
+      </div>
+      <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 18px;flex:1;min-width:130px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Fastest Closure</div>
+        <div style="font-size:26px;font-weight:800;color:#4F46E5;margin:4px 0">${fastestTTC!==null?fastestTTC+'d':'—'}</div>
+        <div style="font-size:11px;color:#9CA3AF">${ttcData.length?ttcData[ttcData.length-1].job.title:'—'}</div>
+      </div>
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px 18px;flex:1;min-width:130px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Slowest Closure</div>
+        <div style="font-size:26px;font-weight:800;color:#DC2626;margin:4px 0">${slowestTTC!==null?slowestTTC+'d':'—'}</div>
+        <div style="font-size:11px;color:#9CA3AF">${ttcData.length?ttcData[0].job.title:'—'}</div>
+      </div>
+      <div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:12px 18px;flex:1;min-width:130px;text-align:center">
+        <div style="font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Open Unfilled</div>
+        <div style="font-size:26px;font-weight:800;color:#D97706;margin:4px 0">${openJobs.length}</div>
+        <div style="font-size:11px;color:#9CA3AF">jobs still open</div>
+      </div>
+    </div>`;
+
+  const maxTTCDays=ttcData.length?Math.max(...ttcData.map(d=>d.dtc),1):1;
+  const ttcTable=ttcData.length?`
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#F9FAFB;border-bottom:1px solid #E5E7EB">
+        ${['Role','Client','Dept','Opened','First Hire Joined','Days to Close','Hires','Speed'].map(h=>`<th style="text-align:left;padding:6px 10px;font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+      ${ttcData.map(d=>{
+        const dtcC=d.dtc<=30?'#059669':d.dtc<=60?'#D97706':'#DC2626';
+        const dtcLabel=d.dtc<=30?'Fast':d.dtc<=60?'Moderate':'Slow';
+        const barW=Math.max(Math.round(d.dtc/maxTTCDays*100),3);
+        return`<tr style="border-bottom:1px solid #F3F4F6">`
+          +`<td style="padding:7px 10px;font-weight:600;color:#111827;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.job.title}</td>`
+          +`<td style="padding:7px 10px;font-size:11px;color:#6B7280;white-space:nowrap">${d.job.client||'—'}</td>`
+          +`<td style="padding:7px 10px;font-size:11px;color:#6B7280;white-space:nowrap">${d.job.dept||'—'}</td>`
+          +`<td style="padding:7px 10px;font-size:11px;color:#6B7280;white-space:nowrap">${_fmtD(d.job.openDate)}</td>`
+          +`<td style="padding:7px 10px;font-size:11px;color:#6B7280;white-space:nowrap">${_fmtD(d.firstJoin)}</td>`
+          +`<td style="padding:7px 10px"><div style="display:flex;align-items:center;gap:7px"><div style="background:#E5E7EB;border-radius:4px;height:12px;width:80px;overflow:hidden"><div style="height:100%;width:${barW}%;background:${dtcC};border-radius:4px"></div></div><span style="font-weight:700;color:${dtcC};min-width:36px">${d.dtc}d</span></div></td>`
+          +`<td style="padding:7px 10px;text-align:center;font-weight:700;color:#4F46E5">${d.hireCount}</td>`
+          +`<td style="padding:7px 10px"><span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${dtcC}20;color:${dtcC}">${dtcLabel}</span></td>`
+          +`</tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`
+    :'<div style="color:#9CA3AF;text-align:center;padding:20px">No closed requirements with hire data yet.</div>';
+
+  const ttcHtml=ttcSummaryCards+ttcTable;
   // Velocity info
   const velHtml=`
     <div style="display:flex;flex-wrap:wrap;gap:10px">
@@ -2583,7 +2733,9 @@ function renderManagement(){
     </div>
     ${section('Position Tracker — All Roles','📋',tblHdr)}
     ${section('Pipeline by Department','🏢',deptHtml)}
-    ${section('Hiring Velocity & Pipeline Health','⏱',velHtml)}
+    ${    ${section('Time to Hire — Monthly Trend 📈','⏱',tthHtml)}
+    ${section('Time to Close Requirements','📅',ttcHtml)}
+    ${section('Hiring Velocity & Pipeline Health','🔬',velHtml)}
     ${section('Candidate Source Mix','🌐',srcHtml)}
     ${section('Agency Performance','🏛',agencyHtml)}
     ${section('Aging Jobs (Open > 30 Days)','⚠️',agingHtml)}
